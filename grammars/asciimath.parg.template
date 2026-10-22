@@ -1,0 +1,149 @@
+# Template for grammars/asciimath.parg. Do not edit the generated .parg by
+# hand: edit this file or data/vocabulary.json and run
+#   ruby scripts/generate_grammar.rb
+# Lines of the form `{{name}}` are replaced by generated rules. Lines that
+# start with `#!` are template-only notes and are not copied.
+#
+#! Transcribed from Plurimath lib/plurimath/asciimath/parse.rb (the oracle
+#! revision is recorded in the generated header). Every parse.rb rule keeps its
+#! name (space? becomes space_opt), its alternative order and its .as names.
+{{header}}
+#
+# Parslet -> PARG transcription notes
+#   str("x")            "x"            .as(:n)      (X) as n
+#   .maybe              [X]            .repeat(1)   1*(X)     .repeat  *(X)
+#   .absent?            !(X)           .present?    &(X)
+#   match(/\s+/)        space: exactly ONE char of [ \t\n\r\v\f] (Parslet's
+#                       match consumes one character whatever the regexp)
+#   match(/(?<!\/)\/(?!\/)/)
+#                       frac_slash = "/" !"/"  (Parslet tests the regexp with
+#                       StringScanner#match?, which cannot see behind the
+#                       current position, so the lookbehind always passes)
+#   any                 any_char
+#   str("")             cannot be written in PARG. In `expression` it is the
+#                       last live alternative (every alternative after it is
+#                       dead and dropped here, see `expression`); it becomes
+#                       [!any_char]. Where a whole `expression` is captured
+#                       (td, rgb_color, the parenthesised expr) the capture is
+#                       split into `(expression_nonempty) as n / "" as n`,
+#                       which yields Parslet's positioned empty leaf exactly.
+#   lparen.capture(:paren) + read_text
+#                       set paren = (lparen) then `switch paren` selects
+#                       *(!"<close>" any_char), one arm per PARENTHESIS pair
+#                       (Parslet: match("[^<close>]").repeat).
+#   decimal_marker      str(Plurimath.configuration.decimal) is fixed per
+#                       parser instance, so the grammar is specialised per
+#                       marker: every rule that reaches decimal_marker is
+#                       emitted once per marker with a __<entry> suffix and
+#                       decimal_marker__<entry> is the plain literal. (A
+#                       runtime `switch decimal` slot would work too, but
+#                       Parsanol never memoises a composite that read state,
+#                       which makes this grammar exponential.) Entries:
+{{decimal_doc}}
+
+grammar Asciimath version "0.1.0" {
+  any_char = %x00-10FFFF
+
+  # rule(:td) { expression.as(:td) }
+  td = (expression_nonempty) as td / "" as td
+  # rule(:base) { str("__|").absent? >> str("_") }
+  base = !"__|" "_"
+  power = "^"
+  # rule(:space) { match(/\s+/) }  -- one character
+  space = " " / "\t" / "\n" / "\r" / %x0B / %x0C
+  comma = "," space_opt
+  # rule(:space?) { space.maybe }
+  space_opt = [space]
+  number = hex_number / binary_number / octal_number / (decimal_number) as number / (".") as symbol
+  decimal_number = (1*digit decimal_marker 1*digit) / 1*digit
+  decimal_operand = !(hex_number / binary_number / octal_number) decimal_number
+  signed_number = ("-" decimal_operand) as number
+  script_operand = signed_number / sequence
+  mod_operand = ("-" &(decimal_operand) iteration) as negative_mod_operand / iteration
+  # Only referenced by a dead `expression` alternative; kept for completeness.
+  controversial_symbols = power_base / expression
+  left_right_open_paren = "(" / "["
+  left_right_close_paren = ")" / "]"
+  color_left_parenthesis = "(" / "[" / "{"
+  color_right_parenthesis = ")" / "]" / "}"
+
+  ternary_classes_rules = ("left" space_opt (left_right_open_paren) as left space_opt (ternary_classes power_base space_opt [(iteration) as third_value]) as ternary space_opt "right" space_opt (left_right_close_paren) as right) / (ternary_classes power_base space_opt [(iteration) as third_value]) as ternary / ternary_classes
+
+  # arr_to_expression(Constants::TERNARY_CLASSES, :ternary_class) etc.
+{{ternary_classes}}
+{{binary_classes}}
+{{sub_sup_classes}}
+{{open_table}}
+{{close_table}}
+  # Constants::PARENTHESIS keys / values, in hash order.
+{{lparen}}
+{{rparen}}
+
+  left_right = ("left" space_opt (left_right_open_paren) as left space_opt ([iteration] [sequence]) as left_right_value space_opt "right" space_opt (left_right_close_paren) as right) / (((table) as numerator space_opt frac_slash space_opt (iteration) as denominator) as frac expression) / ((table) as table [power_base] [expression])
+
+  # The third alternative is str('"') >> str("").as(:text).
+  quoted_text = ("\"" "unitsml(" (*(!")\"" any_char)) as unitsml ")\"") / ("\"" (*(!"\"" any_char)) as text "\"") / ("\"" "" as text)
+
+  symbol_text_or_integer = sub_sup_classes / binary_classes / ternary_classes / {{vocabulary}} / (1*((digit) as number !(decimal_marker digit) (",") as comma)) as comma_separated / quoted_text / (("d") as d ("x") as x) as intermediate_exp / (!"left" !"right" (ascii_letter) as symbol) / (symbol_char) as symbol / number
+
+  power_base = (base space_opt (script_operand) as base_value power !(power [power]) space_opt (script_operand) as power_value) / (space_opt base space_opt (script_operand) as base_value) as base / (space_opt power !(power [power]) space_opt (script_operand) as power_value) as power / (space_opt base space_opt ((power) as symbol) as base_value) as base / (space_opt power !(power [power]) space_opt ((base) as symbol) as power_value) as power
+
+  power_base_rules = (sub_sup_classes power_base) as power_base / (binary_classes space_opt [(sequence) as base_value] space_opt [(sequence) as power_value]) as power_base / ((sequence) as power_base power_base) as power_base
+
+  table = (("{") as table_left space_opt tr space_opt (close_table) as table_right) / ((open_table) as table_left space_opt tr space_opt (close_table) as table_right) / (("norm") as norm (open_table) as table_left space_opt tr space_opt (close_table) as table_right) / (("|") as table_left space_opt tr space_opt ("|") as table_right) / ("left" space_opt (left_right_open_paren) as left space_opt tr space_opt "right" space_opt (left_right_close_paren) as right)
+
+  tr = (((left_right_open_paren) as open_tr (td) as tds_list left_right_close_paren) as table_row space_opt comma space_opt (tr) as expr) / ((left_right_open_paren) as open_tr (td) as tds_list left_right_close_paren) as table_row
+
+  # color_left_parenthesis.capture(:paren) is not transcribed: the only
+  # reader of :paren is read_text, and `text` always sets it immediately
+  # before, so the capture is unobservable; a state write here would only
+  # disable Parsanol's memoisation around every colour argument.
+  color_value = ((color_left_parenthesis) as lparen ((expression_nonempty) as rgb_color / "" as rgb_color) [color_right_parenthesis] as rparen) as intermediate_exp / iteration
+
+  sequence = ((lparen) as lparen space_opt ((expression_nonempty) as expr / "" as expr) space_opt [rparen] as rparen) as intermediate_exp / ("text" set paren = (lparen) (read_text) as text [rparen]) as intermediate_exp / symbol_text_or_integer
+
+  frac = ((sequence) as numerator space_opt frac_slash space_opt (iteration) as denominator) as frac / ((power_base_rules / power_base) as numerator space_opt frac_slash space_opt (iteration) as denominator) as frac
+
+  mod = ((sequence) as dividend space_opt ("mod") as mod space_opt (mod_operand) as divisor) as mod / ((power_base_rules power_base) as dividend space_opt ("mod") as mod space_opt (mod_operand) as divisor) as mod / ((power_base_rules) as dividend space_opt ("mod") as mod space_opt (mod_operand) as divisor) as mod
+
+  iteration = ternary_classes_rules / ((table) as table [power_base]) / (comma) as comma / mod / ((sequence) as sequence space_opt ("//") as symbol) / ("color" (color_value) as color (sequence) as color_value) / frac / (power_base_rules power_base) / power_base_rules / (sequence) as sequence / space
+
+  # Oracle alternatives, in order:
+  #   1 left_right.as(:left_right)
+  #   2 (iteration >> space? >> expression).as(:expr)
+  #   3 (base.as(:symbol) >> expression.maybe).as(:expr)
+  #   4 (power.as(:symbol) >> expression.maybe).as(:expr)
+  #   5 str("")                      -> [!any_char] (always matches empty)
+  #   6 (rparen.as(:rparen) >> space? >> controversial_symbols >> comma.as(:comma).maybe >> expression).repeat(1).as(:expr)
+  #   7 (power.as(:symbol) >> space? >> expression).as(:expr)
+  #   8 (table.as(:table) >> space? >> rparen.as(:rparen) >> space? >> expression.as(:expr).maybe)
+  #   9 comma.as(:comma).maybe
+  # 6-9 follow an always-succeeding alternative and can never match: dropped.
+  expression = expression_nonempty / [!any_char]
+  expression_nonempty = (left_right) as left_right / (iteration space_opt expression) as expr / ((base) as symbol [expression]) as expr / ((power) as symbol [expression]) as expr
+
+  # ---- helpers (no Parslet rule of their own) ----
+  digit = %x30-39
+  ascii_letter = %x41-5A / %x61-7A
+  # match(/(?<!\/)\/(?!\/)/), see the notes above.
+  frac_slash = "/" !"/"
+{{symbol_char}}
+{{read_text}}
+{{decimal_marker}}
+
+  # BaseNumberPrefix::Parser
+{{base_number_prefix}}
+
+  # Used by the vocabulary alternation inlined in symbol_text_or_integer:
+  # Constants.precompile_constants through hash_to_expression /
+  # dynamic_parser_rules, longest word first. Parslet inlines that
+  # alternation into symbol_text_or_integer (hash_to_expression is a method,
+  # not a rule), and so does this grammar. Every :symbol entry is
+  # (str("\\").as(:slash) >> match("\s").repeat >> str("\n")) | str(w).as(:symbol);
+  # the slash branch is identical for all of them, so it is emitted once, at
+  # the first :symbol entry.
+  slash_newline = ("\\") as slash *(" ") "\n"
+
+}
+
+{{entries}}
