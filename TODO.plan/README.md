@@ -1,62 +1,66 @@
-# Plan
+# AsciiMath extraction execution plan
 
-Moving Plurimath's AsciiMath parser into this repository: a PARG grammar,
-compiled into a checksummed artifact, and the `amath` gem that Plurimath then
-uses the way it uses `mml` and `omml`
-([plurimath/plurimath#494](https://github.com/plurimath/plurimath/issues/494)).
+Extract Plurimath's AsciiMath parser into the standalone `amath` gem with a
+PARG grammar and checksummed artifact, as required by
+[Plurimath #494](https://github.com/plurimath/plurimath/issues/494).
+Today `Asciimath::Parse` is a Parslet parser with runtime configuration and
+generated rules. The end state is `Amath.parse` producing a compatible tree;
+Plurimath retains its transform and public conversion behavior.
 
-It runs in parallel with
-[plurimath/plurimath#493](https://github.com/plurimath/plurimath/issues/493),
-measurement uncertainty as the GUM (JCGM 100) describes it. That work lives in
-Plurimath, and its plan is in
-[`TODO.uncertainty/`](https://github.com/plurimath/plurimath/tree/feat/gum-uncertainty/TODO.uncertainty)
-on its branch. The two meet in two places — the AsciiMath parser and the symbol
-vocabulary — so the rules for both lanes live here, in
-[cross-cutting](cross-cutting.md) and [open decisions](open-decisions.md).
+This is a plan, not an implementation report. All work and acceptance checks
+below are pending. No compilation, parity, suite, engine or packaged-gem result
+is claimed. Source references and repository bases are in
+[cross-cutting](cross-cutting.md); decisions awaiting resolution are in
+[open decisions](open-decisions.md).
 
-## Phases
+## Phases and effort
 
-Lane A is #494 (this repository and Plurimath). Lane B is #493 (Plurimath
-only); its phases are listed here so the waits between lanes are visible in one
-place.
+Lane A owns #494 in amath and Plurimath. Lane B owns
+[uncertainty #493](https://github.com/plurimath/plurimath/issues/493) in Plurimath,
+plus the amath grammar and release in B4, and conditional UnitsML dependency work.
+[Its branch plan](https://github.com/plurimath/plurimath/tree/feat/gum-uncertainty/TODO.uncertainty)
+is navigation; the shared obligations below are self-contained.
 
-| Phase | Delivers | Waits for | Status |
-|---|---|---|---|
-| [A0 — Contract and spike](a0-contract/) | amath's interface, and proof that PARG can express the hard parts | — | ▶ next |
-| [A1 — Parity baseline](a1-baseline/) | The frozen oracle: today's trees and outputs for every input | — | ▶ next |
-| [A2 — Grammar port](a2-port/) | `grammars/asciimath.parg`, artifact, corpus, gem | A0 **passed**, A1 | planned |
-| [A3 — Switch Plurimath](a3-switch/) | Plurimath parses through amath; its `parse.rb` gone | A2 | planned |
-| [A4 — Release](a4-release/) | amath released; Plurimath PR merged → **#494 done** | A3 | planned |
-| B0–B3 — Uncertainty design, model, output, input | see [`TODO.uncertainty/`](https://github.com/plurimath/plurimath/tree/feat/gum-uncertainty/TODO.uncertainty) | — | ▶ B0 next |
-| B4 — AsciiMath input for uncertainty | added to this grammar, new amath release | **A4** | blocked on lane A |
+| Phase | Delivers | Prerequisite | Effort (hours) | Status |
+|---|---|---|---|---|
+| [A0](a0-contract/) | Contract, Slice/engine decisions, passing feasibility spike | none | 12–20 | pending |
+| [A1](a1-baseline/) | Frozen typed oracle and baseline output replay | none; A0 resolves normalization before freeze | 14–24 | pending |
+| [A2](a2-port/) | Grammar, artifact, runtime gem and conformance gate | A0 passed, A1 frozen, decisions 1–3 | 28–48 | pending |
+| [A3](a3-switch/) | Plurimath adapter, dependency switch and agreed browser retirement | A2; decisions 8–9 and Slice ownership | 12–22 | pending |
+| [A4](a4-release/) | Packaged/published gem verified, released dependency and merged Plurimath PR | A3 | 8–14 | pending |
+| B0–B3 | Uncertainty design, model, serializers and non-AsciiMath input | B0 contract gates each later phase | estimated in lane B | pending |
+| B4 | AsciiMath uncertainty grammar, amath release and Plurimath input integration | A4 and B0–B3; B0 syntax contract | estimated in lane B | pending |
 
-## How this is organised
+A tasks total **74–128 engineering hours**. Reserve **16–28 hours** separately
+for PARG feasibility, diagnostic normalization, Slice migration or package/platform
+repair: **90–156 hours including contingency**. This excludes lane B's work,
+release authorization and external waiting. Low confidence until A0/A1 pass;
+re-estimate downstream items then, retaining the full acceptance scope. Each
+phase lists additive task ranges; shared fixture work is counted only in A1.
 
-Every phase is a directory whose `README.md` answers four questions in order:
-*what it delivers*, *why here*, *risks and notes*, *exit criteria*.
+## Completion and progressive elaboration
 
-A phase gains numbered work items when work on it starts, one file each, with a
-`## Why`, a `## Scope` and a `## Done when` checklist. Only A0 and A1 have items
-so far. Writing detailed scope for phases that depend on answers we don't have
-yet would be guessing.
+#494 completes when the released amath dependency is used by the merged
+Plurimath PR with the required suite and parity checks passing. A2 alone is
+partial delivery. Preserve accepted/rejected behavior, full consumption,
+configuration, typed positioned leaves, transform outputs and ordinary `+-`.
+A1 freezes the Parslet oracle; neither engine may define its own expected tree.
 
-## Why this order
+A0 and A1 have detailed items now. A2–A4 contain executable scope, paths,
+checks and budgets; expand them into numbered tasks after prerequisites pass,
+using the signed contract rather than guessing unresolved APIs.
 
-1. **A0 before A2** because the current grammar is not static: one rule reads
-   state captured earlier in the parse, the decimal marker comes from
-   configuration, and the symbol vocabulary is generated from Plurimath's own
-   classes. If PARG cannot express those without amath depending on Plurimath,
-   the whole approach changes, so that is proven on a small grammar first.
-2. **A1 alongside A0** because the oracle must be frozen from the code as it is
-   today, before anything moves. It needs nothing from A0.
-3. **Plurimath's transform stays in Plurimath.** amath produces the tree;
-   Plurimath keeps turning trees into its `Math::*` objects, as it does for
-   MathML and OMML. That keeps amath free of Plurimath and the move small.
-4. **B4 after A4** because AsciiMath input for uncertainty belongs in this
-   grammar. Adding it to Plurimath's old parser first would be written twice.
+A0 and A1 may run together. B0–B3 can proceed independently with vocabulary
+and Slice ownership rules observed. B4 starts after A4; do not implement its
+syntax in the parser being removed. Opal implementation is excluded. Decision 8
+must resolve retirement timing before A3 removes the plurimath-js update/test
+path, with the consumer impact in release notes and the PR.
 
-## Scope boundaries
+## Next handoff
 
-- **Opal is out of scope.** plurimath-js is to be replaced by plurimath-ts, so
-  amath is not made to run under Opal. A3 removes Plurimath's plurimath-js CI
-  job and says why in the PR.
+Start [A0 contract](a0-contract/01-amath-contract.md) and
+[A1 baseline inventory](a1-baseline/01-tree-baseline.md) on their pinned bases.
+Record status, delivered revisions, actual command/exit-code evidence and next
+action in each item's checklist. Keep unresolved choices pending. Before removing
+this plan, preserve contracts and the B4 handoff at the durable destinations
+in [cross-cutting](cross-cutting.md#durable-contracts).

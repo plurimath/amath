@@ -1,31 +1,40 @@
-# Open decisions
+# Decisions and blocking points
 
-Each has an owner and the point where it blocks work. Settled decisions move to
-the bottom with the date and who settled them.
+All rows in the open table are pending; proposals are not approvals. Record
+outcome, public rationale and durable contract revision when resolved. The
+original plan records the settled scope below; no additional approval is inferred.
 
 ## Open
 
-| # | Decision | Owner | Blocks | Proposal |
+| # | Decision | Owner | Blocks | Proposed resolution / evidence needed |
 |---|---|---|---|---|
-| 1 | Does the grammar live in `plurimath/amath` with the gem, or in its own grammar repo (the `expressir-grammar` / `postscript-parg` pattern) that other implementations such as plurimath-ts could also load? | Ronald | A2 | One repo, as #494 asks; `grammars/` and `artifacts/` can move out later without changing the gem's API. |
-| 2 | How amath gets the symbol vocabulary: shipped inside the artifact (amath owns it) or passed in by the caller (Plurimath owns it). | Suleman, from A0's result | A2 | Decided by A0's spike. |
-| 3 | How amath gets the decimal marker and other configuration. | Suleman, from A0's result | A2 | A keyword argument to `Amath.parse`, defaulting to `.`. |
-| 4 | Which uncertainty notations #493 covers: `x ± u`, concise `1.23(4)`, expanded `U` with coverage factor `k`, asymmetric `+a/−b`. | Ronald, via B0 | B1 | All four in the model; formats may support a subset. |
-| 5 | How plain `±` differs from measurement uncertainty in each input format. | Ronald, via B0 | B3, B4 | B0 proposes one rule per format. |
-| 6 | LaTeX: input as well, or output only? | Ronald, via B0 | B3 | Output only first; input if B0 finds a clear notation. |
-| 7 | Does uncertainty link to UnitsML (`9.81 ± 0.02 m/s²`)? | Ronald, via B0 | B5 (if any) | Model it so a unit can attach; UnitsML work only if he asks. |
-| 8 | Timing of dropping plurimath-js: #494 removes its CI job; if it merges before plurimath-ts replaces plurimath-js, plurimath-js stops following Plurimath. | Ronald, in PR review | A4 | State it in the PR body. |
-| 9 | plurimath/plurimath#430 (draft, migrates Plurimath's parsers from Parslet to Parsanol in place) touches the same AsciiMath parser this work moves out. | Suleman | A3 | #430's AsciiMath part is superseded by amath; #430 is narrowed to LaTeX. Done after #493/#494 are finished, not before. |
+| 1 | Gem and grammar repository layout | Ronald | A2 | Keep grammar/artifact in amath as #494 requests; confirm after spike. |
+| 2 | Caller or artifact vocabulary; category/order fingerprint and generated tables | Suleman from A0 | A1 freeze, A2 | Compile/reload both feasible candidate boundaries; select one without a Plurimath dependency. |
+| 3 | Decimal/configuration, preprocessing, error offsets, Slice and engine support contract | Suleman from A0 | A1 normalization freeze, A2; ownership before A3 | Proposed keywords and boundary adapter; prove under both engines, non-default locale and non-ASCII input. Record byte/character and raw/preprocessed mapping. |
+| 4 | Required uncertainty forms, per-language minimums and precise semantic payload | Ronald via B0 | B1–B4 contract | Standard, concise, expanded and asymmetric proposals need field/validation examples and required-format floor; no automatic approval of all variants. |
+| 5 | Plain ± versus uncertainty in each input language | Ronald via B0 | B3, B4 | Record explicit syntax; preserve ordinary `+-`. |
+| 6 | LaTeX input or output only | Ronald via B0 | B3 | Output first is a proposal; optional input does not substitute for four required languages. |
+| 7 | UnitsML attachment and separately any dependency work | Ronald via B0 | B1 model; selected work in B2–B4 | Choose unit representation or approved exclusion. If dependency work needed, B owns base/tag, tasks, release and preservation checks. No B5. |
+| 8 | Timing of retiring plurimath-js update/test path | Ronald | A3 | Opal implementation remains excluded. Before deletion record accepted consumer impact, retirement timing and PR/release note text; align A3 diff with outcome. |
+| 9 | All #430 overlap and migration order | Suleman | A3; overlapping B3 work | Proposed AsciiMath superseded by A; proposed LaTeX retained later. Decide HTML/UnicodeMath, shared Slice and direct Parslet dependency changes separately: deferred, superseded, or retained with destination/owner/base. |
 
-## Settled
+Decision 9 is a coordination decision before A3, not a requirement to rewrite
+or merge #430 first. Its proposal to narrow #430 to LaTeX is unapproved until
+recorded. Select one baseline and migration order for both lanes. Keep Parslet
+while the adapter or any unmigrated parser uses it. This plan does not require
+remote edits to #430 now.
 
-- **2026-10-22, Suleman:** the two issues run in parallel; AsciiMath input for
-  #493 waits for #494.
-- **2026-10-22, Suleman:** #494 is done when the Plurimath PR merges with the
-  full suite passing.
-- **2026-10-22, Suleman:** Opal is out of scope; plurimath-js is being replaced
-  by plurimath-ts.
-- **2026-10-22, Suleman:** no separate comment to Ronald before the PR; #494
-  already names the gem and PARG.
-- **2026-10-22, Suleman:** the repo is `plurimath/amath`, public, created
-  empty; first commit `8a15303` "Add README".
+## Recorded scope
+
+- The lanes run in parallel; uncertainty's AsciiMath input waits for extraction.
+- #494 finishes when the Plurimath PR merges with the full suite passing.
+- Opal support is excluded; plurimath-ts is intended to replace plurimath-js.
+  Retirement timing remains decision 8.
+- The existing amath repository starts from `8a15303` (README only).
+
+## Handoff
+
+Next: A0 resolves decisions 2–3 and prepares decision 1 evidence; B0 resolves
+4–7 and commits its durable contract. Before A3, resolve 8–9 and reconcile the
+Slice consumer ownership list. Carry resolved facts into the maintained docs
+listed in [cross-cutting](cross-cutting.md#durable-contracts), not only this table.

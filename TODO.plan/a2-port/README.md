@@ -1,30 +1,78 @@
-# A2 — Grammar port (#494)
+# A2 — Port the grammar and package the runtime
 
-## What it delivers
-The full AsciiMath grammar in `plurimath/amath`: `grammars/asciimath.parg`, the
-compiled artifact with its checksum, the conformance corpus from A1, the
-`Amath.parse` gem from A0's contract, and `scripts/check.rb` that rebuilds the
-artifact and replays the corpus.
+Status: **pending**. Starts after A0 passes, A1 freezes, and decisions 1–3 are
+resolved. Expand numbered work items against those contracts at that point.
 
-## Why here
-After A0 shows the hard parts work and A1 freezes what "correct" means, the
-port is transcription against a gate, not design.
+## Deliverables and additive budget
 
-## Risks and notes
-- `parse.rb` on `main` is 234 lines with 38 rules, plus the rules generated
-  from Ruby tables and from `base_number_prefix.rb`. The generated part is
-  bigger than the hand-written part.
-- Rewriting constructs PARG rejects can change which inputs are accepted. The
-  corpus's rejected cases catch that.
-- plurimath-ts ported this grammar to pegkit; its notes on the grammar's quirks
-  save rediscovery.
-- Gem metadata follows `plurimath/omml`: authors "Ribose Inc.", email
-  open.source@ribose.com, BSD-2-Clause. Minimum Ruby comes from the pinned
-  Parsanol release, not from omml.
+| Task | Exact existing/proposed touchpoints | Effort (hours) | Status |
+|---|---|---|---|
+| Port static and generated grammar | Existing Plurimath `lib/plurimath/asciimath/parse.rb`, `lib/plurimath/asciimath/constants.rb`, `lib/plurimath/base_number_prefix.rb`; proposed amath `grammars/asciimath.parg`, `artifacts/asciimath.json` and selected generated tables | 12–20 | pending |
+| Implement standalone gem boundary | Proposed `amath.gemspec`, `Gemfile`, `lib/amath.rb`, `lib/amath/parser.rb`; `Amath.parse`, selected error and engine interfaces from A0 | 8–14 | pending |
+| Conformance and packaged-runtime checks | Proposed `scripts/check.rb`, `scripts/check_installed_gem.rb`, `spec/amath/parser_spec.rb`, `spec/amath/artifact_spec.rb`, `.github/workflows/test.yml` | 8–14 | pending |
 
-## Exit criteria
-Work items are written when A0 and A1 finish. The gate they will serve:
-- [ ] Every corpus case gives an identical tree on both Parsanol engines.
-- [ ] Every corpus case, put through Plurimath's unchanged transform, gives
-      identical output.
-- [ ] The artifact loads from the built gem, and a wrong checksum fails loudly.
+Total **28–48 hours**. A1 owns baseline fixture construction; A2 consumes it.
+A0 feasibility/normalization or new platform repair uses the separately stated
+contingency; update estimates if a signed contract invalidates this scope.
+
+## Implementation boundary
+
+Transcribe the 38 handwritten rules and all generated alternatives, preserving
+capture labels, order, decimal lookahead and full consumption. No uncertainty
+syntax is introduced here. Record source/compiler/artifact checksum and caller
+configuration fingerprint distinctly. Recompilation with identical inputs must
+be deterministic. Package grammar/embedded source, tables/imports required for
+Ruby execution and corpus as selected by the gem contract; verify installed
+runtime works without a checkout. Use the expressir-grammar layout as reference,
+not its weaker reject-status-only gate.
+
+amath depends on Parsanol only; no require of Plurimath or its constants.
+Metadata proposal follows omml (Ribose Inc., open.source@ribose.com,
+BSD-2-Clause); check license contents and set Ruby minimum from the selected
+Parsanol release (inspected minimum is >=3.2).
+
+## Required conformance gate
+
+Implement the proposed command, its arguments and nonzero failure semantics:
+
+```sh
+bundle exec ruby scripts/check.rb --plurimath-checkout "$PLURIMATH_ORACLE"
+bundle exec rspec spec/amath/parser_spec.rb spec/amath/artifact_spec.rb spec/amath/conformance_spec.rb
+```
+
+The supplied clean checkout is the A1 pinned Plurimath oracle used for its
+unchanged transform/output comparison; use the A0 adapter contract for leaves.
+Every A1 case runs under each **actual** required engine:
+
+- Successful cases independently match the frozen Parslet normalized tree,
+  exact leaf/position contract and expected transform outputs. Agreement between
+  native and Ruby alone is insufficient.
+- Rejected cases independently remain rejected in identical preprocessing,
+  locale/decimal/options and match the A0/A1 failure-coordinate contract.
+  Invalid text after a valid prefix must fail full consumption.
+- Fail if either engine produces the same wrong tree, accepts a baseline reject,
+  changes its agreed offset, selects zero cases, or uses the wrong engine.
+- Add meaningful checker controls in proposed `spec/amath/conformance_spec.rb`:
+  wrong expected leaf/offset, unexpected acceptance and invalid trailing input
+  cause failure; unchanged ordinary algebra, parentheses, decimals and `+-`
+  retain their frozen result. These controls verify assertions, not just exit 0.
+
+Run installed-gem checks via proposed `scripts/check_installed_gem.rb` after
+`gem build amath.gemspec`. Implement its CLI as described in A4. Native-capable
+jobs must prove both engines; a deliberate no-native job proves selected
+fallback/strict-native behavior. Missing/malformed/checksum-invalid/unsupported
+artifacts must fail loudly in all supported modes. Record actual engines and
+platforms. Inspect the effective CI matrix before adding explicit support jobs;
+do not infer it from Plurimath's reusable-workflow caller.
+
+## Exit criteria / #494 mapping
+
+- [ ] Standalone PARG artifact and gem implement the signed A0 API.
+- [ ] All successful A1 cases match oracle tree/leaves/offsets and outputs on each engine.
+- [ ] All rejected A1 cases preserve rejection, agreed offset and context.
+- [ ] Fingerprint and checksum controls fail appropriately; regeneration is deterministic.
+- [ ] Installed-gem engine/fallback/error policy passes for documented platforms.
+- [ ] Record dependency pin, artifact hash, counts, actual engines, SHA and exits.
+
+Next handoff: A3 receives a consumable amath ref, recorded Slice decision and
+passing gates. No existing Plurimath parser is deleted until this acceptance passes.

@@ -1,30 +1,45 @@
-# TODO 2 — Replay outputs from the shared testsuite
+# 02 — Replay the shared outputs
 
-## Why
-Identical trees should give identical output, but "should" is not evidence.
-The testsuite already holds the expected outputs, made from the same commit we
-start from, so replaying them costs little and catches anything the tree
-comparison misses.
+Status: **pending**. Effort: **6–10 hours**. Depends on clean pinned oracle and
+testsuite checkouts; does not require the port.
 
-## Scope
-- Use plurimath-testsuite's `corpus/asciimath/` at a pinned commit (currently
-  `e9e2403`, generated from Plurimath `ae20be11` per `corpus/provenance.yaml`).
-- Check the pin's provenance before trusting it: generator commit, Plurimath
-  version and commit, payload checksums.
-- A runner that reads each case by its schema and declared targets, not as
-  "six outputs per input". At `e9e2403` the files include, per Codex: 13 parse
-  rejections, 66 cases that call the number formatter, four partial-render
-  cases that expect a renderer error, and two MathML-only UnitsML cases with
-  their own call arguments. The runner:
-  - compares each declared target's output;
-  - replays recorded calls with their arguments;
-  - asserts expected errors;
-  - fails on an unknown schema, a missing expectation, or zero cases selected.
-- Run it on `ae20be11` first; it must pass there before it can judge anything
-  else.
+## Scope and proposed files
+
+Create Plurimath `scripts/replay_asciimath_corpus.rb` and
+`spec/plurimath/asciimath_corpus_replay_spec.rb`. Preserve this runner after plan
+removal and document its CLI in the durable extraction handoff.
+
+Read testsuite `corpus/provenance.yaml` at
+`e9e2403b2714219fa8ed80ad863460a9c5c7db0e`. Verify generator/source revision,
+Plurimath version/commit and all 27 payloads' recorded SHA-256/byte counts before
+using expected results. Record the pin rather than fetching mutable main.
+
+Implement schema-aware dispatch, not six-output assumptions. The pinned corpus
+includes 13 parse-rejection records, 66 number-formatter calls, four partial
+renders expecting renderer errors, and two MathML-only UnitsML records with
+special arguments. Validate those inventory observations while implementing;
+report counts by schema and outcome. Replay each declared target and recorded
+call/arguments; assert expected errors. Fail on unknown schema, missing expected
+result or zero selection. Do not silently skip unsupported records.
+
+## Planned commands and expected outcomes
+
+In the clean pinned Plurimath checkout after adding the proposed runner:
+
+```sh
+bundle exec ruby scripts/replay_asciimath_corpus.rb --testsuite-checkout "$PLURIMATH_TESTSUITE"
+bundle exec rspec spec/plurimath/asciimath_corpus_replay_spec.rb
+```
+
+Implement the proposed option as shown; variable points to the pinned testsuite
+checkout. Assert mismatched output/error, unknown schema and zero-case selection
+fail nonzero; valid baseline replay passes. Save actual counts/exit codes. The
+same runner and pin are A3's output gate. A2's typed/rejection gate covers all
+A1 oracle cases, including those absent from the shared testsuite.
 
 ## Done when
-- [ ] The runner passes on `ae20be11`, with the case count and exit code
-      recorded.
-- [ ] The testsuite pin and its provenance check are written down.
-- [ ] It runs as part of A3's gate.
+
+- [ ] Provenance and payload integrity are checked before replay.
+- [ ] Runner passes on original `ae20be11`; expected-error controls are meaningful.
+- [ ] Actual revisions/counts/commands are recorded; no baseline failures hidden.
+- [ ] A3 invokes the runner unchanged against the selected amath dependency.
