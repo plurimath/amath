@@ -18,7 +18,7 @@ is claimed. Source references and repository bases are in
 Lane A owns #494 in amath and Plurimath. Lane B owns
 [uncertainty #493](https://github.com/plurimath/plurimath/issues/493) in Plurimath,
 plus the amath grammar and release in B4, and conditional UnitsML dependency work.
-[Its branch plan](https://github.com/plurimath/plurimath/tree/feat/gum-uncertainty/TODO.uncertainty)
+[Its branch plan](https://github.com/plurimath/plurimath/tree/main/TODO.uncertainty)
 is navigation; the shared obligations below are self-contained.
 
 | Phase | Delivers | Prerequisite | Status |
