@@ -15,6 +15,7 @@ the bottom with the date and who settled them.
 | 6 | LaTeX: input as well, or output only? | Ronald, via B0 | B3 | Output only first; input if B0 finds a clear notation. |
 | 7 | Does uncertainty link to UnitsML (`9.81 ± 0.02 m/s²`)? | Ronald, via B0 | B5 (if any) | Model it so a unit can attach; UnitsML work only if he asks. |
 | 8 | Timing of dropping plurimath-js: #494 removes its CI job; if it merges before plurimath-ts replaces plurimath-js, plurimath-js stops following Plurimath. | Ronald, in PR review | A4 | State it in the PR body. |
+| 9 | plurimath/plurimath#430 (draft, migrates Plurimath's parsers from Parslet to Parsanol in place) touches the same AsciiMath parser this work moves out. | Suleman | A3 | #430's AsciiMath part is superseded by amath; #430 is narrowed to LaTeX. Done after #493/#494 are finished, not before. |
 
 ## Settled
 
