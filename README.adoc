@@ -1,0 +1,37 @@
+= Amath: AsciiMath parser for Ruby
+
+== Purpose
+
+Amath is a parser for https://asciimath.org[AsciiMath], the plain-text
+notation for mathematics. It turns input like this into a parse tree:
+
+[source]
+----
+sum_(i=1)^n i^2 = (n(n+1)(2n+1))/6
+----
+
+The tree records the structure of the formula: which symbols, fractions,
+roots, sub- and superscripts, matrices and brackets it contains, and how they
+nest. Your code decides what to do with it, such as rendering, converting or
+analysing it.
+
+== Grammar
+
+The AsciiMath grammar will be written in PARG, the grammar language of
+https://github.com/parsanol/parsanol-ruby[Parsanol], and compiled into a
+checksummed artifact that the gem loads at runtime. The repository will hold:
+
+* `grammars/`: the grammar source.
+* `artifacts/`: the compiled artifact.
+* `corpora/`: conformance cases with the input and the tree it must produce.
+
+== Status
+
+Amath is under active development and has not been released yet. Its first
+release will be the AsciiMath parser currently inside
+https://github.com/plurimath/plurimath[Plurimath], moved here
+(https://github.com/plurimath/plurimath/issues/494[plurimath/plurimath#494]).
+
+== License
+
+Copyright Ribose Inc. Licensed under the BSD 2-Clause License.
