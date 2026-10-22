@@ -25,12 +25,74 @@ checksummed artifact that the gem loads at runtime. The repository will hold:
 * `artifacts/`: the compiled artifact.
 * `corpora/`: conformance cases with the input and the tree it must produce.
 
+== Installation
+
+Amath has not been released to RubyGems yet. Until it is, use it from Git in
+your `Gemfile`:
+
+[source,ruby]
+----
+gem "amath", github: "plurimath/amath"
+----
+
+Amath needs Ruby 3.2 or later. Its only runtime dependency is
+https://github.com/parsanol/parsanol-ruby[Parsanol].
+
+== Usage
+
+[source,ruby]
+----
+require "amath"
+
+tree = Amath.parse("x_y")
+# => {expr: {sequence: {symbol: "x"@0}, expr: {symbol: "_"@1, ...}}}
+----
+
+The result is a Parsanol tree: hashes and arrays whose leaves are
+`Parsanol::Slice` objects. Each leaf knows its text and where it starts in
+the input. Empty input gives back an empty string.
+
+Numbers use a dot as the decimal marker unless you say otherwise. A comma and
+the Arabic decimal separator are also supported:
+
+[source,ruby]
+----
+Amath.parse("1,5", decimal: ",")
+Amath.parse("1\u066B5", decimal: "\u066B")
+----
+
+Input that is not valid AsciiMath raises `Amath::ParseError`, which tells you
+where the parser gave up:
+
+[source,ruby]
+----
+begin
+  Amath.parse("x 1.")
+rescue Amath::ParseError => e
+  e.char_offset # => position in characters
+  e.byte_offset # => position in UTF-8 bytes
+end
+----
+
+Amath uses Parsanol's fast native engine where it is available and its pure
+Ruby engine elsewhere. You can choose one with `engine: :native` or
+`engine: :ruby`; asking for the native engine where it cannot run raises
+`Amath::EngineUnavailable` rather than quietly using Ruby.
+`Amath.last_engine` tells you which engine handled the last call.
+
+The exact rules for trees, positions, engines and errors are in
+link:docs/parser-contract.adoc[the parser contract].
+
 == Status
 
 Amath is under active development and has not been released yet. Its first
 release will be the AsciiMath parser currently inside
 https://github.com/plurimath/plurimath[Plurimath], moved here
 (https://github.com/plurimath/plurimath/issues/494[plurimath/plurimath#494]).
+
+The runtime described under Usage is in place. The full AsciiMath grammar
+artifact is still being written; until `artifacts/asciimath.json` lands,
+`Amath.parse` raises `Amath::ArtifactError` because it has no grammar to run.
 
 == License
 
