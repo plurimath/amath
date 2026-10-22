@@ -13,7 +13,7 @@ is claimed. Source references and repository bases are in
 [cross-cutting](cross-cutting.md); decisions awaiting resolution are in
 [open decisions](open-decisions.md).
 
-## Phases and effort
+## Phases
 
 Lane A owns #494 in amath and Plurimath. Lane B owns
 [uncertainty #493](https://github.com/plurimath/plurimath/issues/493) in Plurimath,
@@ -21,22 +21,15 @@ plus the amath grammar and release in B4, and conditional UnitsML dependency wor
 [Its branch plan](https://github.com/plurimath/plurimath/tree/feat/gum-uncertainty/TODO.uncertainty)
 is navigation; the shared obligations below are self-contained.
 
-| Phase | Delivers | Prerequisite | Effort (hours) | Status |
-|---|---|---|---|---|
-| [A0](a0-contract/) | Contract, Slice/engine decisions, passing feasibility spike | none | 12–20 | pending |
-| [A1](a1-baseline/) | Frozen typed oracle and baseline output replay | none; A0 resolves normalization before freeze | 14–24 | pending |
-| [A2](a2-port/) | Grammar, artifact, runtime gem and conformance gate | A0 passed, A1 frozen, decisions 1–3 | 28–48 | pending |
-| [A3](a3-switch/) | Plurimath adapter, dependency switch and agreed browser retirement | A2; decisions 8–9 and Slice ownership | 12–22 | pending |
-| [A4](a4-release/) | Packaged/published gem verified, released dependency and merged Plurimath PR | A3 | 8–14 | pending |
-| B0–B3 | Uncertainty design, model, serializers and non-AsciiMath input | B0 contract gates each later phase | estimated in lane B | pending |
-| B4 | AsciiMath uncertainty grammar, amath release and Plurimath input integration | A4 and B0–B3; B0 syntax contract | estimated in lane B | pending |
-
-A tasks total **74–128 engineering hours**. Reserve **16–28 hours** separately
-for PARG feasibility, diagnostic normalization, Slice migration or package/platform
-repair: **90–156 hours including contingency**. This excludes lane B's work,
-release authorization and external waiting. Low confidence until A0/A1 pass;
-re-estimate downstream items then, retaining the full acceptance scope. Each
-phase lists additive task ranges; shared fixture work is counted only in A1.
+| Phase | Delivers | Prerequisite | Status |
+|---|---|---|---|
+| [A0](a0-contract/) | Contract, Slice/engine decisions, passing feasibility spike | none | pending |
+| [A1](a1-baseline/) | Frozen typed oracle and baseline output replay | none; A0 resolves normalization before freeze | pending |
+| [A2](a2-port/) | Grammar, artifact, runtime gem and conformance gate | A0 passed, A1 frozen, decisions 1–3 | pending |
+| [A3](a3-switch/) | Plurimath adapter, dependency switch and agreed browser retirement | A2; Slice ownership | pending |
+| [A4](a4-release/) | Packaged/published gem verified, released dependency and merged Plurimath PR | A3 | pending |
+| B0–B3 | Uncertainty design, model, serializers and non-AsciiMath input | B0 contract gates each later phase | pending |
+| B4 | AsciiMath uncertainty grammar, amath release and Plurimath input integration | A4 and B0–B3; B0 syntax contract | pending |
 
 ## Completion and progressive elaboration
 
@@ -47,14 +40,14 @@ configuration, typed positioned leaves, transform outputs and ordinary `+-`.
 A1 freezes the Parslet oracle; neither engine may define its own expected tree.
 
 A0 and A1 have detailed items now. A2–A4 contain executable scope, paths,
-checks and budgets; expand them into numbered tasks after prerequisites pass,
+checks; expand them into numbered tasks after prerequisites pass,
 using the signed contract rather than guessing unresolved APIs.
 
 A0 and A1 may run together. B0–B3 can proceed independently with vocabulary
 and Slice ownership rules observed. B4 starts after A4; do not implement its
-syntax in the parser being removed. Opal implementation is excluded. Decision 8
-must resolve retirement timing before A3 removes the plurimath-js update/test
-path, with the consumer impact in release notes and the PR.
+syntax in the parser being removed. Opal implementation is excluded. A3's PR removes
+the plurimath-js update/test path and states the consumer impact; Ronald's review
+of that PR decides it (decision 8).
 
 ## Next handoff
 

@@ -1,6 +1,6 @@
 # 01 — Record typed trees and rejections
 
-Status: **pending**. Effort: **8–14 hours**. Inventory can start immediately;
+Status: **pending**. Inventory can start immediately;
 final serialization depends on A0's agreed normalization and decisions 2–3.
 
 ## Scope and proposed paths

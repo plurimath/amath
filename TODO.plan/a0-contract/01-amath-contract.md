@@ -1,6 +1,6 @@
 # 01 — Define the amath boundary
 
-Status: **pending**. Effort: **4–7 hours**. Dependencies: pinned source in
+Status: **pending**. Dependencies: pinned source in
 [cross-cutting](../cross-cutting.md); resolve with A0 spike results before A2.
 
 ## Why

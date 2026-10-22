@@ -3,14 +3,14 @@
 Status: **pending**. Starts after A3 passes. #494 is complete only after the
 Plurimath PR uses a released amath and merges with the full suite passing.
 
-## Work and additive effort
+## Work
 
-| Task | Files / result | Effort (hours) | Status |
-|---|---|---|---|
-| Build/install and support-policy proof | amath `amath.gemspec`, proposed `scripts/check_installed_gem.rb`, `docs/parser-contract.adoc`, `docs/extraction-handoff.adoc` | 4–7 | pending |
-| Release/dependency propagation and durable handoff | amath version/changelog paths discovered from selected release convention; Plurimath `plurimath.gemspec`, `Gemfile` and maintained uncertainty contract link | 4–7 | pending |
+| Task | Files / result | Status |
+|---|---|---|
+| Build/install and support-policy proof | amath `amath.gemspec`, proposed `scripts/check_installed_gem.rb`, `docs/parser-contract.adoc`, `docs/extraction-handoff.adoc` | pending |
+| Release/dependency propagation and durable handoff | amath version/changelog paths discovered from selected release convention; Plurimath `plurimath.gemspec`, `Gemfile` and maintained uncertainty contract link | pending |
 
-Total **8–14 hours**, excluding external waiting. Discover the mml/omml release
+Discover the mml/omml release
 convention and name actual version/changelog/tag commands before expanding this
 item; do not invent an existing release task. Release and issue closure require
 their own authorization; planning does not publish anything.

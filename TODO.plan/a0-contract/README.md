@@ -6,14 +6,10 @@ or vocabulary semantics.
 
 ## Deliverables and tasks
 
-| Item | Files / result | Effort (hours) | Status |
-|---|---|---|---|
-| [01 — Contract](01-amath-contract.md) | Existing `README.adoc`; proposed `docs/parser-contract.adoc`, `docs/extraction-handoff.adoc`; shared ownership decision | 4–7 | pending |
-| [02 — Spike](02-feasibility-spike.md) | Proposed disposable grammar and differential checks; compiler/dependency evidence | 8–13 | pending |
-
-Total **12–20 hours**, including investigation and focused validation. The prior
-informal one-day spike describes only a small probe, not end-to-end delivery.
-Contingency is counted once in the overview.
+| Item | Files / result | Status |
+|---|---|---|
+| [01 — Contract](01-amath-contract.md) | Existing `README.adoc`; proposed `docs/parser-contract.adoc`, `docs/extraction-handoff.adoc`; shared ownership decision | pending |
+| [02 — Spike](02-feasibility-spike.md) | Proposed disposable grammar and differential checks; compiler/dependency evidence | pending |
 
 ## Why this gates the port
 

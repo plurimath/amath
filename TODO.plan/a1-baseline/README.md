@@ -4,14 +4,12 @@ Status: **pending**. A1 captures the unmodified Parslet behavior at Plurimath
 `ae20be111a26fdd988c58be0bfb2b7f6fe6e352f`; it may run beside A0. Freeze only
 after A0 resolves leaf/error normalization and vocabulary/context semantics.
 
-| Item | Result | Effort (hours) | Status |
-|---|---|---|---|
-| [01 — Tree baseline](01-tree-baseline.md) | Typed positioned successes, rejects and context manifest | 8–14 | pending |
-| [02 — Output replay](02-output-replay.md) | Schema-aware replay passing on the pinned oracle | 6–10 | pending |
+| Item | Result | Status |
+|---|---|---|
+| [01 — Tree baseline](01-tree-baseline.md) | Typed positioned successes, rejects and context manifest | pending |
+| [02 — Output replay](02-output-replay.md) | Schema-aware replay passing on the pinned oracle | pending |
 
-Total **14–24 hours** including inventory, scripts, regression controls and
-validation. These fixtures/scripts are reused by later phases rather than
-estimated again there.
+These fixtures and scripts are reused by later phases.
 
 The shared testsuite has 27 AsciiMath payload files with string-only parse trees.
 It is input to A1, not a typed/positioned oracle. Add every AsciiMath input in

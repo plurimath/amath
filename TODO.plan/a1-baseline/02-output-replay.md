@@ -1,6 +1,6 @@
 # 02 — Replay the shared outputs
 
-Status: **pending**. Effort: **6–10 hours**. Depends on clean pinned oracle and
+Status: **pending**. Depends on clean pinned oracle and
 testsuite checkouts; does not require the port.
 
 ## Scope and proposed files

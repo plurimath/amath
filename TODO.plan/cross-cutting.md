@@ -30,10 +30,11 @@ updates this table and A3's numbered scope **before A3 starts**.
 | `lib/plurimath/asciimath/transform.rb` | No change if the boundary adapter works. Conditional A0-authorized Slice migration only during A3; B4 adds uncertainty rules after A4. |
 | `lib/plurimath/math/**`, `lib/plurimath/math/function.rb` | B; exception for exact Slice consumers below only if A0 chooses migration. |
 | `lib/plurimath/math/number.rb`, `lib/plurimath/math/function/unary_function.rb`, `lib/plurimath/utility.rb` | Conditional A Slice migration only; coordinate a non-overlapping change window with B. Otherwise A leaves them unchanged. |
-| `lib/plurimath/unicode_math/**`, `lib/plurimath/mathml/**`, `lib/plurimath/omml/**`, `lib/plurimath/latex/**` | B; reconcile #430 disposition before parser work. |
+| `lib/plurimath/unicode_math/**`, `lib/plurimath/mathml/**`, `lib/plurimath/omml/**`, `lib/plurimath/latex/**` | B. #430 also touches these; it is not built on (decision 9). |
 | `plurimath.gemspec`, `Gemfile` | A adds amath; B owns agreed UnitsML bump and B4 minimum amath version; integrate sequentially. |
 | Existing specs including `spec/plurimath/asciimath/**` | A freezes baseline, both preserve cases. Add new tests in separate files; coordinate edits to existing shared cases. |
-| `.rspec-opal`, `Rakefile` (`spec-opal`), `.github/workflows/plurimath_js.yml`, `dependent-repos-js.json` | A retirement only after decision 8 before A3. |
+| `.rspec-opal`, `Rakefile` (`spec-opal`), `.github/workflows/plurimath_js.yml`, `dependent-repos-js.json` | A removes in A3's PR; Ronald's review decides (decision 8). |
+| `scripts/replay_asciimath_corpus.rb`, `spec/plurimath/asciimath_corpus_replay_spec.rb`, `spec/plurimath/asciimath_amath_spec.rb` | A (A1 replay runner and A3 checks). B does not edit them. |
 
 The complete Slice inventory includes six checks in `asciimath/transform.rb`,
 and one each in `math/number.rb`, `math/function/unary_function.rb`,
@@ -134,4 +135,4 @@ is evidenced by Plurimath and Parsanol gemspecs, not a complete support matrix.
 - [Testsuite](https://github.com/plurimath/plurimath-testsuite/tree/e9e2403b2714219fa8ed80ad863460a9c5c7db0e): `corpus/asciimath/` (27 payload files), `corpus/provenance.yaml`; validate checksums before replay.
 - [Parsanol inspected source](https://github.com/parsanol/parsanol-ruby/tree/663a1a223b6788a21f49ca55b917e29109b6c041): `Artifact.load`, `Artifact#parse`, `Slice`, PARG compiler and gemspec. This SHA is not a selected release dependency; A0 must pin one.
 - [expressir-grammar layout](https://github.com/lutaml/expressir-grammar/tree/0240350098d0ce92b8143940b7cea951bb77292b): grammar/artifact/corpus and `scripts/check.rb`. Its rejection-only check is insufficient for the error-position contract here.
-- [#430](https://github.com/plurimath/plurimath/pull/430): overlapping parser migration; resolve all affected parsers and dependency/Slice work under decision 9.
+- [#430](https://github.com/plurimath/plurimath/pull/430): overlapping parser migration; waits until #493/#494 merge, then rebased (decision 9).

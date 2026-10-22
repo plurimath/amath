@@ -3,17 +3,15 @@
 Status: **pending**. Starts after A0 passes, A1 freezes, and decisions 1–3 are
 resolved. Expand numbered work items against those contracts at that point.
 
-## Deliverables and additive budget
+## Deliverables
 
-| Task | Exact existing/proposed touchpoints | Effort (hours) | Status |
-|---|---|---|---|
-| Port static and generated grammar | Existing Plurimath `lib/plurimath/asciimath/parse.rb`, `lib/plurimath/asciimath/constants.rb`, `lib/plurimath/base_number_prefix.rb`; proposed amath `grammars/asciimath.parg`, `artifacts/asciimath.json` and selected generated tables | 12–20 | pending |
-| Implement standalone gem boundary | Proposed `amath.gemspec`, `Gemfile`, `lib/amath.rb`, `lib/amath/parser.rb`; `Amath.parse`, selected error and engine interfaces from A0 | 8–14 | pending |
-| Conformance and packaged-runtime checks | Proposed `scripts/check.rb`, `scripts/check_installed_gem.rb`, `spec/amath/parser_spec.rb`, `spec/amath/artifact_spec.rb`, `.github/workflows/test.yml` | 8–14 | pending |
+| Task | Exact existing/proposed touchpoints | Status |
+|---|---|---|
+| Port static and generated grammar | Existing Plurimath `lib/plurimath/asciimath/parse.rb`, `lib/plurimath/asciimath/constants.rb`, `lib/plurimath/base_number_prefix.rb`; proposed amath `grammars/asciimath.parg`, `artifacts/asciimath.json` and selected generated tables | pending |
+| Implement standalone gem boundary | Proposed `amath.gemspec`, `Gemfile`, `lib/amath.rb`, `lib/amath/parser.rb`; `Amath.parse`, selected error and engine interfaces from A0 | pending |
+| Conformance and packaged-runtime checks | Proposed `scripts/check.rb`, `scripts/check_installed_gem.rb`, `spec/amath/parser_spec.rb`, `spec/amath/artifact_spec.rb`, `.github/workflows/test.yml` | pending |
 
-Total **28–48 hours**. A1 owns baseline fixture construction; A2 consumes it.
-A0 feasibility/normalization or new platform repair uses the separately stated
-contingency; update estimates if a signed contract invalidates this scope.
+A1 owns baseline fixture construction; A2 consumes it.
 
 ## Implementation boundary
 

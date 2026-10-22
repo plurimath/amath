@@ -1,18 +1,17 @@
 # A3 — Switch Plurimath to amath
 
-Status: **pending**. Starts after A2 acceptance, decision 8 (browser retirement),
-decision 9 (#430 disposition) and A0's final Slice ownership update. Expand
+Status: **pending**. Starts after A2 acceptance and A0's final Slice ownership
+update. Decisions 8 and 9 are recorded in [open decisions](../open-decisions.md). Expand
 numbered items against the actual A2 API and ref, preserving these gates.
 
-## Work and additive effort
+## Work
 
-| Task | Paths / behavior | Effort (hours) | Status |
-|---|---|---|---|
-| Adapter and dependency switch | `lib/plurimath/asciimath/parser.rb` (`Parser#parse`), `lib/plurimath/asciimath.rb`, `plurimath.gemspec`, `Gemfile`; proposed `lib/plurimath/asciimath/slice_adapter.rb` | 6–11 | pending |
-| Accepted retirement and compatibility validation | `.github/workflows/plurimath_js.yml`, `dependent-repos-js.json`, `.rspec-opal`, `Rakefile` `spec-opal`; proposed `spec/plurimath/asciimath_amath_spec.rb` and preserved A1 replay | 6–11 | pending |
+| Task | Paths / behavior | Status |
+|---|---|---|
+| Adapter and dependency switch | `lib/plurimath/asciimath/parser.rb` (`Parser#parse`), `lib/plurimath/asciimath.rb`, `plurimath.gemspec`, `Gemfile`; proposed `lib/plurimath/asciimath/slice_adapter.rb` | pending |
+| Accepted retirement and compatibility validation | `.github/workflows/plurimath_js.yml`, `dependent-repos-js.json`, `.rspec-opal`, `Rakefile` `spec-opal`; proposed `spec/plurimath/asciimath_amath_spec.rb` and preserved A1 replay | pending |
 
-Total **12–22 hours**; exceptional Slice migration repair uses the overview's
-contingency. If migration is selected, enumerate its exact edits in numbered
+If migration is selected, enumerate its exact edits in numbered
 work items and shared ownership before starting, not after a scope-check failure.
 
 ## Implementation instructions
@@ -26,16 +25,14 @@ only additional authorized consumer paths are A0's explicit list in
 [cross-cutting](../cross-cutting.md#file-ownership-in-plurimath), coordinated with B.
 
 Use a recorded amath git ref for interim CI, then released version in A4. Keep
-Parslet as required by real Slice construction or remaining parsers. The #430
-coordination outcome must cover HTML, UnicodeMath, LaTeX and shared Slice/dependency
-changes as well as AsciiMath; no requirement to merge or rewrite #430 first.
+Parslet as required by real Slice construction or remaining parsers. #430 is not
+built on; it is rebased after #493 and #494 merge (decision 9).
 
-Opal implementation is excluded. Before deleting browser update/test files,
-record decision 8's retirement timing and accepted impact: plurimath-js stops
-following Plurimath if the replacement is not yet available. Put the accepted
-impact in the PR and release notes. If timing selects a later removal, move
-that work and its checks to that agreed phase and update scope/ownership now;
-do not delete against an unresolved A4 decision.
+Opal implementation is excluded. The PR removes the browser update/test files
+and states the impact: plurimath-js stops following Plurimath until plurimath-ts
+replaces it. Put the same note in the release notes. Ronald's review of the PR
+decides it (decision 8); if he asks to keep the path, drop the removal from the
+PR and keep its checks.
 
 ## Planned checks
 

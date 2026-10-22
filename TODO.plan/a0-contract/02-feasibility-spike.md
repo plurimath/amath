@@ -1,6 +1,6 @@
 # 02 — Prove PARG feasibility
 
-Status: **pending**. Effort: **8–13 hours**. Depends on the draft comparison
+Status: **pending**. Depends on the draft comparison
 contract in item 01. A failing probe blocks A2; do not expand the full port first.
 
 ## Proposed disposable work
