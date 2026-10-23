@@ -86,7 +86,7 @@ grammar Asciimath version "0.1.0" {
   # The third alternative is str('"') >> str("").as(:text).
   quoted_text = ("\"" "unitsml(" (*(!")\"" any_char)) as unitsml ")\"") / ("\"" (*(!"\"" any_char)) as text "\"") / ("\"" "" as text)
 
-  symbol_text_or_integer = sub_sup_classes / binary_classes / ternary_classes / {{vocabulary}} / (1*((digit) as number !(decimal_marker digit) (",") as comma)) as comma_separated / quoted_text / (("d") as d ("x") as x) as intermediate_exp / (!"left" !"right" (ascii_letter) as symbol) / (symbol_char) as symbol / number
+  symbol_text_or_integer = uncertainty / sub_sup_classes / binary_classes / ternary_classes / {{vocabulary}} / (1*((digit) as number !(decimal_marker digit) (",") as comma)) as comma_separated / quoted_text / (("d") as d ("x") as x) as intermediate_exp / (!"left" !"right" !uncertainty_head (ascii_letter) as symbol) / (symbol_char) as symbol / number
 
   power_base = (base space_opt (script_operand) as base_value power !(power [power]) space_opt (script_operand) as power_value) / (space_opt base space_opt (script_operand) as base_value) as base / (space_opt power !(power [power]) space_opt (script_operand) as power_value) as power / (space_opt base space_opt ((power) as symbol) as base_value) as base / (space_opt power !(power [power]) space_opt ((base) as symbol) as power_value) as power
 
@@ -149,6 +149,26 @@ grammar Asciimath version "0.1.0" {
   # collisions (e.g. two or more spaces after the table) are not emulated.
   expression_tail = (left_right_tail) as left_right / (!ternary_classes_rules ((table) as table [power_base]) space_opt expression) as expr !any_char / ((&ternary_classes_rules / !table) iteration space_opt expression_tail) as expr / ((base) as symbol [expression]) as expr !any_char / ((power) as symbol [expression]) as expr !any_char / (1*((rparen) as rparen space_opt controversial_symbols [(comma) as comma] expression)) as expr !any_char / ((power) as symbol space_opt expression_tail) as expr / ((table) as table space_opt (rparen) as rparen space_opt [(expression) as expr] !any_char) / ([(comma) as comma] !any_char)
   left_right_tail = ("left" space_opt (left_right_open_paren) as left space_opt ([iteration] [sequence]) as left_right_value space_opt "right" space_opt (left_right_close_paren) as right !any_char) / (((table) as numerator space_opt frac_slash space_opt (iteration) as denominator) as frac expression_tail) / ((table) as table [power_base] [expression] !any_char)
+
+  # ---- measurement uncertainty (plurimath#493) ----
+  # ustd(y, u) / ustd(y(d)) / uexp(y, U, k[, p]) / ucov(y, lo, hi, p[, kind]),
+  # each with an optional last "unitsml(...)" argument; tree contract in
+  # plurimath docs/uncertainty-asciimath-tree.md. `uncertainty` is the first
+  # alternative of symbol_text_or_integer, so `uexp(` no longer reads as
+  # `u exp(`; uncertainty_head keeps a malformed call (e.g. uexp with two
+  # arguments) from falling back to the letter `u`, so it is rejected.
+  # Numbers always use a full stop, whatever the decimal marker.
+  uncertainty_head = ("ustd" / "uexp" / "ucov") "("
+  unc_number = 1*digit ["." 1*digit]
+  unc_value = (["-"] unc_number) as value
+  unc_sep = *space "," *space
+  unc_unit = unc_sep "\"unitsml(" (*(!")\"" any_char)) as unit ")\""
+  unc_open = "(" *space
+  unc_close = *space ")"
+  uncertainty = (uncertainty_std / uncertainty_exp / uncertainty_cov) as uncertainty
+  uncertainty_std = ("ustd") as uncertainty_class unc_open unc_value (unc_sep (unc_number) as magnitude / "(" (1*digit) as concise_digits ")") [unc_unit] unc_close
+  uncertainty_exp = ("uexp") as uncertainty_class unc_open unc_value unc_sep (unc_number) as magnitude unc_sep (unc_number) as coverage_factor [unc_sep (unc_number) as coverage_probability] [unc_unit] unc_close
+  uncertainty_cov = ("ucov") as uncertainty_class unc_open unc_value unc_sep (unc_number) as lower unc_sep (unc_number) as upper unc_sep (unc_number) as coverage_probability [unc_sep ("shortest" / "symmetric") as interval_kind] [unc_unit] unc_close
 
   # ---- helpers (no Parslet rule of their own) ----
   digit = %x30-39
