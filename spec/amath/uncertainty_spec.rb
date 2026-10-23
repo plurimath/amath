@@ -13,7 +13,7 @@ module UncertaintyTrees
   # Plurimath's acceptance contract; every AsciiMath input cell is parsed.
   CONTRACT_PATH = ENV.fetch(
     "PLURIMATH_UNCERTAINTY_CONTRACT",
-    "/home/apple/ruby_gems/wt-gum-ascii/spec/plurimath/fixtures/uncertainty/contract.yml",
+    File.expand_path("../fixtures/uncertainty_contract.yml", __dir__),
   )
 
   # contract cell id => the tree under `uncertainty:` (nil: must be rejected,
