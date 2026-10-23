@@ -136,9 +136,18 @@ grammar Asciimath version "0.1.0" {
   # use expression_tail. Alternative 5 (str("") at end) and 9 (comma.maybe
   # at end) both match only the empty rest of input, where 6-8 cannot match,
   # so 5 is folded into 9, the last branch.
-  # (Parslet's packrat cache keys on atom and position, not consume_all; this
-  # transcription assumes no tail/non-tail cache collision changes a result.)
-  expression_tail = (left_right_tail) as left_right / (iteration space_opt expression_tail) as expr / ((base) as symbol [expression]) as expr !any_char / ((power) as symbol [expression]) as expr !any_char / (1*((rparen) as rparen space_opt controversial_symbols [(comma) as comma] expression)) as expr !any_char / ((power) as symbol space_opt expression_tail) as expr / ((table) as table space_opt (rparen) as rparen space_opt [(expression) as expr] !any_char) / ([(comma) as comma] !any_char)
+  # Parslet's packrat cache keys on atom and position, NOT on consume_all,
+  # so a tail-position `expression` at a position where a non-tail
+  # `expression` already ran reuses that non-tail result and then fails the
+  # end-of-input check. One collision is reproduced: whenever `table`
+  # matches at a tail position, left_right_tail's third alternative has
+  # already run a non-tail [expression] right after `table [power_base]`;
+  # so when alternative 2 then takes iteration's table branch (ternary
+  # failed, table matched), the expression after it behaves as a non-tail
+  # expression that must reach end of input (alternative 2a below), and
+  # iteration's other branches keep the true tail rule (2b). Other
+  # collisions (e.g. two or more spaces after the table) are not emulated.
+  expression_tail = (left_right_tail) as left_right / (!ternary_classes_rules ((table) as table [power_base]) space_opt expression) as expr !any_char / ((&ternary_classes_rules / !table) iteration space_opt expression_tail) as expr / ((base) as symbol [expression]) as expr !any_char / ((power) as symbol [expression]) as expr !any_char / (1*((rparen) as rparen space_opt controversial_symbols [(comma) as comma] expression)) as expr !any_char / ((power) as symbol space_opt expression_tail) as expr / ((table) as table space_opt (rparen) as rparen space_opt [(expression) as expr] !any_char) / ([(comma) as comma] !any_char)
   left_right_tail = ("left" space_opt (left_right_open_paren) as left space_opt ([iteration] [sequence]) as left_right_value space_opt "right" space_opt (left_right_close_paren) as right !any_char) / (((table) as numerator space_opt frac_slash space_opt (iteration) as denominator) as frac expression_tail) / ((table) as table [power_base] [expression] !any_char)
 
   # ---- helpers (no Parslet rule of their own) ----
