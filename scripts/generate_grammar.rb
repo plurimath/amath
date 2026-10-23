@@ -44,6 +44,7 @@ class Generator
       "decimal_marker" => decimal_marker,
       "base_number_prefix" => base_number_prefix,
       "vocabulary" => vocabulary,
+      "vocabulary_rules" => @vocab_rules.join("\n"),
       "entries" => entries,
     }
     used = []
@@ -65,7 +66,10 @@ class Generator
     end.join
     missing = parts.keys - used
     abort "placeholders not used by the template: #{missing.join(', ')}" unless missing.empty?
-    specialise!(out)
+    out = specialise!(out)
+    bad = out.each_line.with_index(1).reject { |l, _| l.ascii_only? }.map(&:last)
+    abort "generated grammar is not pure ASCII (lines #{bad.first(5).join(', ')})" unless bad.empty?
+    out
   end
 
   private
@@ -83,7 +87,7 @@ class Generator
 
   def decimal_doc
     markers.map do |m|
-      "#                         entry #{MARKER_ENTRIES.fetch(m)}: decimal marker #{m.inspect} (U+#{format('%04X', m.ord)})"
+      "#                         entry #{MARKER_ENTRIES.fetch(m)}: decimal marker U+#{format('%04X', m.ord)}"
     end.join("\n")
   end
 
@@ -117,8 +121,13 @@ class Generator
     pieces.size == 1 ? pieces.first : "(#{pieces.join(' ')})"
   end
 
+  # ASCII only: everything else is written as %x code points, so the
+  # generated .parg is pure ASCII. (Parsanol 1.3.107's PARG lexer indexes the
+  # source by character offset, which is quadratic on a non-ASCII string; with
+  # a few hundred KB of source that alone costs ~30 s at every artifact load,
+  # because Artifact#root_atom re-lexes the embedded source.)
   def printable?(char)
-    char.ord >= 0x20 && char.ord != 0x7F
+    char.ord >= 0x20 && char.ord < 0x7F
   end
 
   def hex(code)
@@ -174,13 +183,25 @@ class Generator
     merged.map { |lo, hi| lo == hi ? hex(lo) : "#{hex(lo)}-#{format('%02X', hi)}" }.join(" / ")
   end
 
+  def complement(ranges)
+    out = []
+    nxt = 0
+    ranges.sort.each do |lo, hi|
+      out << [nxt, lo - 1] if lo > nxt
+      nxt = [nxt, hi + 1].max
+    end
+    out << [nxt, 0x10FFFF] if nxt <= 0x10FFFF
+    out
+  end
+
   def symbol_char
     src = @data["symbol_char_class"]
     negated, ranges = parse_class(src)
     abort "symbol class is expected to be negated" unless negated
-    ["  # match(#{src})",
-     "  symbol_char_excluded = #{class_alt(ranges)}",
-     "  symbol_char = !symbol_char_excluded any_char"].join("\n")
+    ["  # match(#{src.gsub(/[^\x00-\x7F]/) { |c| format('\\u{%X}', c.ord) }})",
+     # The complement as positive ranges: the Parsanol 1.3.107 Ruby engine
+     # accepts "ℛ" for `!symbol_char_excluded any_char` (native rejects it).
+     "  symbol_char = #{class_alt(complement(ranges))}"].join("\n")
   end
 
   # read_text: match("[^#{close}]").repeat for the captured open paren.
@@ -190,9 +211,11 @@ class Generator
     @data["parenthesis"].each_with_index do |(open, close), i|
       abort "paren #{close.inspect} is not one character" unless close.length == 1
       lines << "  read_text_#{i} = *(!#{lit(close)} any_char)"
-      arms << "#{lit(open)} -> read_text_#{i}"
+      arms << "(#{lit(open)} (read_text_#{i}) as text)"
     end
-    lines << "  read_text = switch paren { #{arms.join(' ')} }"
+    # One branch per PARENTHESIS pair, in lparen order: the open paren's own
+    # text is unnamed (dropped from the tree), exactly like lparen.capture.
+    lines << "  text_body = #{arms.join(' / ')}"
     lines.join("\n")
   end
 
@@ -205,7 +228,7 @@ class Generator
   end
 
   def entries
-    markers.map { |m| "entry #{MARKER_ENTRIES.fetch(m)}: expression__#{MARKER_ENTRIES.fetch(m)}" }.join("\n")
+    markers.map { |m| "entry #{MARKER_ENTRIES.fetch(m)}: expression_tail__#{MARKER_ENTRIES.fetch(m)}" }.join("\n")
   end
 
   TOKEN = /"(?:[^"\\]|\\.)*"|\bas\s+\w+|%x[0-9A-Fa-f.\-]+|\b[A-Za-z_]\w*\b/
@@ -273,28 +296,69 @@ class Generator
   def vocabulary
     underscore = @data["unary_underscore_words"]
     slash_done = false
+    slash_word = "\\"
     branches = @data["precompile_constants"].flat_map do |word, category|
       w = lit(word)
       case category
       when "symbol"
-        out = slash_done ? [] : ["slash_newline"]
+        out = slash_done ? [] : [[slash_word, "slash_newline", false]]
         slash_done = true
-        out + ["(#{w}) as symbol"]
+        out + [[word, "((#{w}) as symbol)", false]]
       when "unary_class"
         if underscore.include?(word)
-          ["((#{w}) as unary_class space_opt (\"_\") as symbol) as unary / ((#{w}) as unary_class space_opt [sequence]) as unary"]
+          [[word, "(((#{w}) as unary_class space_opt (\"_\") as symbol) as unary / ((#{w}) as unary_class space_opt [sequence]) as unary)", true]]
         else
-          ["(((#{w}) as unary_class) as power_base space_opt power_base) as unary / ((#{w}) as unary_class space_opt [sequence]) as unary"]
+          [[word, "((((#{w}) as unary_class) as power_base space_opt power_base) as unary / ((#{w}) as unary_class space_opt [sequence]) as unary)", true]]
         end
-      when "fonts" then ["(#{w}) as fonts_class space_opt (sequence) as fonts_value"]
-      when "special_fonts" then ["(#{w}) as bold_fonts"]
+      when "fonts" then [[word, "((#{w}) as fonts_class space_opt (sequence) as fonts_value)", true]]
+      when "special_fonts" then [[word, "((#{w}) as bold_fonts)", false]]
       else abort "unknown vocabulary category #{category.inspect} for #{word.inspect}"
       end
     end
-    # Each branch is one alternative of the oracle's single alternation;
-    # grouping keeps multi-element branches intact inside the `/` list. The
-    # whole alternation is inlined (parenthesised) where Parslet inlines it.
-    "(#{branches.map { |b| b == 'slash_newline' ? b : "(#{b})" }.join(' / ')})"
+    # Every branch starts with its word's literal, so branches whose words
+    # start with different characters can never both match at one position:
+    # the alternation equals, at any position, its branches for that first
+    # character in their original order. Grouping by first character (order
+    # kept inside each group) and dispatching through a balanced tree of
+    # character-range lookaheads is therefore the same choice, without
+    # trying all 3,300 literals at every position (the native engine is slow
+    # on a flat alternation this wide). The whole alternation is inlined
+    # (parenthesised) where Parslet inlines it.
+    @vocab_rules = []
+    groups = branches.group_by { |word, _, _| word[0].ord }.sort.map do |cp, list|
+      [cp, runs(cp, list)]
+    end
+    dispatch(groups)
+  end
+
+  # Consecutive decimal-independent branches of one first-character group
+  # become a shared rule (order kept); dependent branches (unary, fonts)
+  # stay inline because they reference sequence / power_base.
+  def runs(codepoint, list)
+    list.chunk_while { |a, b| a[2] == b[2] }.flat_map do |run|
+      if run.first[2] || run.size < 2
+        run.map { |b| b[1] }
+      else
+        name = "vocabulary_#{@vocab_rules.size}"
+        @vocab_rules << "  #{name} = &#{hex(codepoint)} (#{run.map { |b| b[1] }.join(' / ')})"
+        [name]
+      end
+    end
+  end
+
+  def dispatch(groups)
+    if groups.size == 1
+      list = groups.first.last
+      return list.size == 1 ? list.first : "(#{list.join(' / ')})"
+    end
+
+    mid = groups.size / 2
+    left = groups[0...mid]
+    right = groups[mid..]
+    lo = left.first.first
+    hi = left.last.first
+    guard = lo == hi ? hex(lo) : "#{hex(lo)}-#{format('%02X', hi)}"
+    "((&#{guard} #{dispatch(left)}) / #{dispatch(right)})"
   end
 end
 
