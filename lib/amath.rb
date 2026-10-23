@@ -104,17 +104,41 @@ module Amath
       artifact.parse(entry, text, mode: mode)
     rescue Parsanol::ParseFailed => e
       Thread.current[:amath_last_engine] = mode
-      raise parse_error(e, text)
+      raise parse_error(e, artifact, entry, text)
     rescue Parsanol::PARG::Error, Parsanol::GrammarError, Parsanol::Native::UnsupportedGrammar => e
       raise ArtifactError, "artifact #{@artifact_path} cannot be used: #{e.class}: #{e.message}"
     end
 
-    def parse_error(error, text)
-      byte = deepest_position(error.parse_failure_cause)
+    def parse_error(error, artifact, entry, text)
+      byte = parslet_position(artifact, entry, text) || deepest_position(error.parse_failure_cause)
       char = byte && char_offset(text, byte)
       where = byte ? " at character #{char} (byte #{byte})" : ""
       ParseError.new("AsciiMath input rejected#{where}: #{error.message.lines.first&.strip}",
                      input: text, byte_offset: byte, char_offset: char)
+    end
+
+    # The rejection position Plurimath's Parslet parser reported: the
+    # deepest *leaf* of the cause tree built by a Parslet-style Tree
+    # reporter, which holds only the failures that caused the final
+    # rejection. Neither engine's own cause gives this: the native engine
+    # returns one childless cause at its farthest failure, and the Ruby
+    # engine's Deepest reporter grafts in failures from branches that
+    # later succeeded, so both can point past Parslet's position. The
+    # interpreter reparse runs only on rejection. Returns nil if that
+    # reparse unexpectedly accepts, so the caller falls back.
+    def parslet_position(artifact, entry, text)
+      artifact.root_atom(entry).parse(text, reporter: Parsanol::ErrorReporter::Tree.new)
+      nil
+    rescue Parsanol::ParseFailed => e
+      e.parse_failure_cause && deepest_leaf(e.parse_failure_cause)
+    end
+
+    # Parslet's rule: a node with children reports no position of its own.
+    def deepest_leaf(cause)
+      children = cause.children.compact
+      return cause.position if children.empty?
+
+      children.map { |c| deepest_leaf(c) }.compact.max
     end
 
     def deepest_position(cause)

@@ -6,9 +6,11 @@ module Amath
 
   # The input is not valid AsciiMath for the selected decimal marker.
   #
-  # Positions are zero-based and point at the deepest failure the engine
-  # reported. +byte_offset+ counts UTF-8 bytes into the input (Parsanol's
-  # native unit); +char_offset+ counts characters, the unit Parslet used.
+  # Positions are zero-based and match what Plurimath's Parslet parser
+  # reported, on either engine: the deepest leaf of the tree of failures
+  # that caused the rejection. +byte_offset+ counts UTF-8 bytes into the
+  # input (Parsanol's native unit); +char_offset+ counts characters, the
+  # unit Parslet used.
   class ParseError < Error
     attr_reader :input, :byte_offset, :char_offset
 

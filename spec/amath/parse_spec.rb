@@ -54,10 +54,10 @@ RSpec.describe Amath do
       it "raises ParseError with byte and character positions" do
         expect { described_class.parse("text(é) 1,", decimal: ",", engine: engine) }
           .to raise_error(Amath::ParseError) { |e|
-            expect(e.byte_offset).to eq(11)
-            expect(e.char_offset).to eq(10)
+            expect(e.byte_offset).to eq(10)
+            expect(e.char_offset).to eq(9)
             expect(e.input).to eq("text(é) 1,")
-            expect(e.message).to include("character 10 (byte 11)")
+            expect(e.message).to include("character 9 (byte 10)")
             expect(e.cause).to be_a(Parsanol::ParseFailed)
           }
         expect(described_class.last_engine).to eq(engine)
