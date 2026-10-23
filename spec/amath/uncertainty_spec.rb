@@ -16,7 +16,8 @@ module UncertaintyTrees
     File.expand_path("../fixtures/uncertainty_contract.yml", __dir__),
   )
 
-  # contract cell id => the tree under `uncertainty:` (nil: must be rejected,
+  # contract cell id => the tree under `uncertainty:` (:fallback: not a
+  # well-formed uncertainty form, so it parses exactly as in FALLBACK;
   # :plain: an ordinary input that never produces this tree).
   TREES = {
     "standard.default" =>
@@ -44,7 +45,7 @@ module UncertaintyTrees
     "units.expanded_gram" =>
       { uncertainty_class: "uexp", value: "100.02147", magnitude: "0.00079",
         coverage_factor: "2", unit: "g" },
-    "invalid.asciimath_missing_k" => nil,
+    "invalid.asciimath_missing_k" => :fallback,
     "ordinary_pm.numbers" => :plain,
     "ordinary_pm.concise_lookalike" => :plain,
   }.freeze
@@ -68,14 +69,27 @@ module UncertaintyTrees
         interval_kind: "symmetric", unit: "g" },
   }.freeze
 
-  REJECTED = [
-    "uexp(10.0, 0.3)",                    # no coverage factor
-    "ustd(1.230)",                        # neither magnitude nor digits
-    "ustd(1.230, 0.004, 2)",              # too many arguments
-    "ucov(1.024, 0.983, 1.088)",          # no coverage probability
-    "ucov(1.024, 0.983, 1.088, 0.95, probabilistically-symmetric)",
-    "uexp(10.0, -0.3, 2)",                # only the value may be signed
-  ].freeze
+  # A ustd/uexp/ucov call that is not a well-formed uncertainty form is not
+  # rejected: it falls back to letters, `u exp(...)` / `u s t d(...)`, as in
+  # Plurimath's Parslet parser. Trees from the artifact at 2aa5ee2 (before
+  # the uncertainty syntax), each leaf as [text, offset]. This includes the
+  # contract's invalid.asciimath_missing_k cell, uexp(10.0, 0.3).
+  FALLBACK = {
+    "uexp(x)" => {expr: {sequence: {symbol: ["u", 0]}, expr: {sequence: {unary: {unary_class: ["exp", 1], intermediate_exp: {lparen: ["(", 4], expr: {expr: {sequence: {symbol: ["x", 5]}}}, rparen: [")", 6]}}}}}},
+    "uexp(-t/tau)" => {expr: {sequence: {symbol: ["u", 0]}, expr: {sequence: {unary: {unary_class: ["exp", 1], intermediate_exp: {lparen: ["(", 4], expr: {expr: {sequence: {symbol: ["-", 5]}, expr: {frac: {numerator: {symbol: ["t", 6]}, denominator: {sequence: {symbol: ["tau", 8]}}}}}}, rparen: [")", 11]}}}}}},
+    "f = uexp(i omega t)" => {expr: {sequence: {symbol: ["f", 0]}, expr: {sequence: {symbol: ["=", 2]}, expr: {sequence: {symbol: ["u", 4]}, expr: {sequence: {unary: {unary_class: ["exp", 5], intermediate_exp: {lparen: ["(", 8], expr: {expr: {sequence: {symbol: ["i", 9]}, expr: {sequence: {symbol: ["omega", 11]}, expr: {sequence: {symbol: ["t", 17]}}}}}, rparen: [")", 18]}}}}}}}},
+    "uexp(2)" => {expr: {sequence: {symbol: ["u", 0]}, expr: {sequence: {unary: {unary_class: ["exp", 1], intermediate_exp: {lparen: ["(", 4], expr: {expr: {sequence: {number: ["2", 5]}}}, rparen: [")", 6]}}}}}},
+    "ucov(x, y)" => {expr: {sequence: {symbol: ["u", 0]}, expr: {sequence: {symbol: ["c", 1]}, expr: {sequence: {symbol: ["o", 2]}, expr: {sequence: {symbol: ["v", 3]}, expr: {sequence: {intermediate_exp: {lparen: ["(", 4], expr: {expr: {sequence: {symbol: ["x", 5]}, expr: {comma: [", ", 6], expr: {sequence: {symbol: ["y", 8]}}}}}, rparen: [")", 9]}}}}}}}},
+    "ustd" => {expr: {sequence: {symbol: ["u", 0]}, expr: {sequence: {symbol: ["s", 1]}, expr: {sequence: {symbol: ["t", 2]}, expr: {sequence: {symbol: ["d", 3]}}}}}},
+    "ucov" => {expr: {sequence: {symbol: ["u", 0]}, expr: {sequence: {symbol: ["c", 1]}, expr: {sequence: {symbol: ["o", 2]}, expr: {sequence: {symbol: ["v", 3]}}}}}},
+    "ustd(x)" => {expr: {sequence: {symbol: ["u", 0]}, expr: {sequence: {symbol: ["s", 1]}, expr: {sequence: {symbol: ["t", 2]}, expr: {sequence: {symbol: ["d", 3]}, expr: {sequence: {intermediate_exp: {lparen: ["(", 4], expr: {expr: {sequence: {symbol: ["x", 5]}}}, rparen: [")", 6]}}}}}}}},
+    "uexp(10.0, 0.3)" => {expr: {sequence: {symbol: ["u", 0]}, expr: {sequence: {unary: {unary_class: ["exp", 1], intermediate_exp: {lparen: ["(", 4], expr: {expr: {sequence: {number: ["10.0", 5]}, expr: {comma: [", ", 9], expr: {sequence: {number: ["0.3", 11]}}}}}, rparen: [")", 14]}}}}}},
+    "ustd(1.230)" => {expr: {sequence: {symbol: ["u", 0]}, expr: {sequence: {symbol: ["s", 1]}, expr: {sequence: {symbol: ["t", 2]}, expr: {sequence: {symbol: ["d", 3]}, expr: {sequence: {intermediate_exp: {lparen: ["(", 4], expr: {expr: {sequence: {number: ["1.230", 5]}}}, rparen: [")", 10]}}}}}}}},
+    "ustd(1.230, 0.004, 2)" => {expr: {sequence: {symbol: ["u", 0]}, expr: {sequence: {symbol: ["s", 1]}, expr: {sequence: {symbol: ["t", 2]}, expr: {sequence: {symbol: ["d", 3]}, expr: {sequence: {intermediate_exp: {lparen: ["(", 4], expr: {expr: {sequence: {number: ["1.230", 5]}, expr: {comma: [", ", 10], expr: {sequence: {number: ["0.004", 12]}, expr: {comma: [", ", 17], expr: {sequence: {number: ["2", 19]}}}}}}}, rparen: [")", 20]}}}}}}}},
+    "ucov(1.024, 0.983, 1.088)" => {expr: {sequence: {symbol: ["u", 0]}, expr: {sequence: {symbol: ["c", 1]}, expr: {sequence: {symbol: ["o", 2]}, expr: {sequence: {symbol: ["v", 3]}, expr: {sequence: {intermediate_exp: {lparen: ["(", 4], expr: {expr: {sequence: {number: ["1.024", 5]}, expr: {comma: [", ", 10], expr: {sequence: {number: ["0.983", 12]}, expr: {comma: [", ", 17], expr: {sequence: {number: ["1.088", 19]}}}}}}}, rparen: [")", 24]}}}}}}}},
+    "ucov(1.024, 0.983, 1.088, 0.95, probabilistically-symmetric)" => {expr: {sequence: {symbol: ["u", 0]}, expr: {sequence: {symbol: ["c", 1]}, expr: {sequence: {symbol: ["o", 2]}, expr: {sequence: {symbol: ["v", 3]}, expr: {sequence: {intermediate_exp: {lparen: ["(", 4], expr: {expr: {sequence: {number: ["1.024", 5]}, expr: {comma: [", ", 10], expr: {sequence: {number: ["0.983", 12]}, expr: {comma: [", ", 17], expr: {sequence: {number: ["1.088", 19]}, expr: {comma: [", ", 24], expr: {sequence: {number: ["0.95", 26]}, expr: {comma: [", ", 30], expr: {sequence: {symbol: ["p", 32]}, expr: {sequence: {symbol: ["r", 33]}, expr: {sequence: {symbol: ["o", 34]}, expr: {sequence: {symbol: ["b", 35]}, expr: {sequence: {symbol: ["a", 36]}, expr: {sequence: {symbol: ["b", 37]}, expr: {sequence: {symbol: ["i", 38]}, expr: {sequence: {symbol: ["l", 39]}, expr: {sequence: {symbol: ["i", 40]}, expr: {sequence: {symbol: ["s", 41]}, expr: {sequence: {symbol: ["t", 42]}, expr: {sequence: {symbol: ["i", 43]}, expr: {sequence: {symbol: ["c", 44]}, expr: {sequence: {symbol: ["a", 45]}, expr: {sequence: {symbol: ["ll", 46]}, expr: {sequence: {symbol: ["y", 48]}, expr: {sequence: {symbol: ["-", 49]}, expr: {sequence: {symbol: ["s", 50]}, expr: {sequence: {symbol: ["y", 51]}, expr: {sequence: {symbol: ["m", 52]}, expr: {sequence: {symbol: ["m", 53]}, expr: {sequence: {symbol: ["e", 54]}, expr: {sequence: {symbol: ["t", 55]}, expr: {sequence: {symbol: ["r", 56]}, expr: {sequence: {symbol: ["i", 57]}, expr: {sequence: {symbol: ["c", 58]}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}, rparen: [")", 59]}}}}}}}},
+    "uexp(10.0, -0.3, 2)" => {expr: {sequence: {symbol: ["u", 0]}, expr: {sequence: {unary: {unary_class: ["exp", 1], intermediate_exp: {lparen: ["(", 4], expr: {expr: {sequence: {number: ["10.0", 5]}, expr: {comma: [", ", 9], expr: {sequence: {symbol: ["-", 11]}, expr: {sequence: {number: ["0.3", 12]}, expr: {comma: [", ", 15], expr: {sequence: {number: ["2", 17]}}}}}}}}, rparen: [")", 18]}}}}}},
+  }.freeze
 
   # Trees from the artifact at 4c5e331 (before this grammar change), with
   # each leaf as [text, offset]. These inputs must parse exactly as before.
@@ -159,8 +173,9 @@ RSpec.describe "AsciiMath uncertainty syntax" do
 
         it "#{cell['id']}: #{input}" do
           case expected
-          when nil
-            expect { parse(input, engine) }.to raise_error(Amath::ParseError)
+          when :fallback
+            expect(UncertaintyTrees.plain(parse(input, engine)))
+              .to eq(UncertaintyTrees::FALLBACK.fetch(input))
           when :plain
             tree = parse(input, engine)
             expect(tree.inspect).not_to include("uncertainty")
@@ -187,9 +202,9 @@ RSpec.describe "AsciiMath uncertainty syntax" do
           .to eq(uncertainty_class: "ustd", value: "1.23", magnitude: "0.04")
       end
 
-      UncertaintyTrees::REJECTED.each do |input|
-        it "rejects #{input}" do
-          expect { parse(input, engine) }.to raise_error(Amath::ParseError)
+      UncertaintyTrees::FALLBACK.each do |input, before|
+        it "falls back to the old tree for #{input}" do
+          expect(UncertaintyTrees.plain(parse(input, engine))).to eq(before)
         end
       end
 
