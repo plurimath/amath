@@ -45,9 +45,8 @@ using the signed contract rather than guessing unresolved APIs.
 
 A0 and A1 may run together. B0–B3 can proceed independently with vocabulary
 and Slice ownership rules observed. B4 starts after A4; do not implement its
-syntax in the parser being removed. Opal implementation is excluded. A3's PR removes
-the plurimath-js update/test path and states the consumer impact; Ronald's review
-of that PR decides it (decision 8).
+syntax in the parser being removed. Opal implementation is excluded. In Plurimath,
+the plurimath-js update/test path stays until Ronald states Opal is no longer needed (decision 8); amath is not made Opal-compatible.
 
 ## Next handoff
 

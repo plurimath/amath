@@ -85,15 +85,15 @@ link:docs/parser-contract.adoc[the parser contract].
 
 == Status
 
-Amath is under active development and has not been released yet. Its first
-release will be the AsciiMath parser currently inside
-https://github.com/plurimath/plurimath[Plurimath], moved here
+Amath parses all of Plurimath's AsciiMath: Plurimath uses it for AsciiMath
+input
 (https://github.com/plurimath/plurimath/issues/494[plurimath/plurimath#494]).
+It also reads the measurement-uncertainty forms `ustd(...)`, `uexp(...)` and
+`ucov(...)` that Plurimath turns into uncertainty nodes
+(https://github.com/plurimath/plurimath/issues/493[plurimath/plurimath#493]).
 
-The runtime described under Usage is in place. The full AsciiMath grammar
-artifact is still being written; until `artifacts/asciimath.json` lands,
-`Amath.parse` raises `Amath::ArtifactError` because it has no grammar to run.
+It has not been released to RubyGems yet.
 
 == License
 
-Copyright Ribose Inc. Licensed under the BSD 2-Clause License.
+Copyright Ribose Inc. Licensed under the BSD 2-Clause License; see link:LICENSE.md[].

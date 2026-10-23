@@ -28,11 +28,8 @@ Use a recorded amath git ref for interim CI, then released version in A4. Keep
 Parslet as required by real Slice construction or remaining parsers. #430 is not
 built on; it is rebased after #493 and #494 merge (decision 9).
 
-Opal implementation is excluded. The PR removes the browser update/test files
-and states the impact: plurimath-js stops following Plurimath until plurimath-ts
-replaces it. Put the same note in the release notes. Ronald's review of the PR
-decides it (decision 8); if he asks to keep the path, drop the removal from the
-PR and keep its checks.
+Opal implementation is excluded, but the plurimath-js CI, `.rspec-opal` and the
+`spec-opal` task stay until Ronald states Opal is no longer needed (decision 8).
 
 ## Planned checks
 
