@@ -78,6 +78,10 @@ Amath uses Parsanol's fast native engine where it is available and its pure
 Ruby engine elsewhere. You can choose one with `engine: :native` or
 `engine: :ruby`; asking for the native engine where it cannot run raises
 `Amath::EngineUnavailable` rather than quietly using Ruby.
+The native engine has a recursion limit (roughly 100 levels of nested
+brackets); by default amath parses deeper input with the Ruby engine, while
+`engine: :native` raises `Amath::NestingTooDeep`, a kind of
+`Amath::ParseError`.
 `Amath.last_engine` tells you which engine handled the last call.
 
 The exact rules for trees, positions, engines and errors are in

@@ -79,23 +79,29 @@ so amath decides the engine itself before calling Parsanol:
 | `engine:` | Behaviour
 
 | `:auto` (default)
-| Native if `Parsanol::Native.available?`, otherwise Ruby.
+| Native if `Parsanol::Native.available?`, otherwise Ruby. Input nested too
+  deeply for the native engine (see <<deep-nesting>>) is parsed again with the
+  Ruby engine.
 
 | `:native`
 | Native. If the extension is not available, raises
-  `Amath::EngineUnavailable`; never runs Ruby instead.
+  `Amath::EngineUnavailable`; never runs Ruby instead. Input nested too
+  deeply for the native engine raises `Amath::NestingTooDeep`; never runs
+  Ruby instead.
 
 | `:ruby`
 | Ruby engine only; the native extension is not called.
 |===
 
 After every call that reaches the parser (success or `ParseError`),
-`Amath.last_engine` returns the engine amath selected, `:native` or `:ruby`.
-The value is thread-local; it is `nil` on a thread that has not parsed yet.
+`Amath.last_engine` returns the engine that produced the result, `:native` or
+`:ruby`: under `:auto` it is `:ruby` when deep input was parsed again with the
+Ruby engine. The value is thread-local; it is `nil` on a thread that has not
+parsed yet.
 
 Limits of what `last_engine` proves:
 
-* It records the engine amath *selected*. Inside `Parsanol::Native.parse`,
+* It records the engine amath ran. Inside `Parsanol::Native.parse`,
   Parsanol may still run its interpreter for grammar constructs native cannot
   express (custom atoms). The amath grammar is expected to contain none; the
   differential check in `scripts/check.rb` is where internal fallback is
@@ -103,6 +109,36 @@ Limits of what `last_engine` proves:
 * Parsanol 1.3.107 ships precompiled native extensions for x86_64 Linux on
   Ruby 3.2 to 4.0. CI runs Ruby 3.2, 3.3 and 3.4 on ubuntu-latest with the
   native examples required. Other platforms are not yet verified.
+
+[[deep-nesting]]
+=== Deep nesting
+
+Parsanol's native engine stops at a fixed recursion depth ("Maximum recursion
+depth (500) exceeded" or "Recursion limit exceeded: depth 1000"). With the
+AsciiMath artifact that is about 110 levels of `(` and about 80 of `{`; other
+constructs (`sqrt`, `/`, unary `-`) reach it at other depths. On a thread
+other than the main one, the native call can also exhaust the thread's Ruby
+stack (1 MiB by default) much earlier (at about 40 levels of `(` on x86_64 Linux); Ruby reports
+that as `SystemStackError`.
+
+For such a recursion-limit failure Parsanol's own error path would reparse
+the input through its Ruby interpreter with a diagnostic reporter, which on
+deep input takes minutes or exhausts the stack. amath therefore hooks
+`Parsanol::Native.raise_native_parse_error` (a prepended module, active only
+on the current thread while amath's own native call runs) and stops at the
+native failure. Then:
+
+* `engine: :auto` parses the input with the Ruby engine (`last_engine` is
+  `:ruby`), as it also does when the native call raises `SystemStackError`;
+* `engine: :native` raises `Amath::NestingTooDeep` (`last_engine` is
+  `:native`).
+
+The Ruby engine has no fixed limit but is bounded by the Ruby stack. On the
+main thread it parses 1,000 levels of `(`; rejecting deep invalid input needs
+more stack, because Parsanol reparses it with its recursive interpreter to
+find the position, so a rejection of input a few hundred levels deep can
+raise `Amath::NestingTooDeep` instead of a positioned `ParseError`. amath
+never lets `SystemStackError` escape from `Amath.parse`.
 
 == Errors
 
@@ -119,6 +155,13 @@ rejection, never a partial tree. Attributes:
 +
 The message text is for humans and is not part of the contract. The original
 `Parsanol::ParseFailed` is available as `cause`.
+
+`Amath::NestingTooDeep < Amath::ParseError`::
+The input nests deeper than the engine that ran can handle: the native
+engine's recursion limit under `engine: :native`, or an exhausted Ruby stack
+under any engine. See <<deep-nesting>>. `byte_offset` and `char_offset` are
+`nil`, since no rejection position was found; `input` is set. Whether such
+input is valid AsciiMath is not known.
 
 `Amath::ArtifactError`::
 The artifact is missing, is not valid JSON, is not a JSON object, fails its
