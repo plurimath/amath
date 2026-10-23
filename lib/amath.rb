@@ -18,6 +18,11 @@ module Amath
 
   ENGINES = %i[auto native ruby].freeze
 
+  # Deepest bracket nesting sent to the native engine off the main thread.
+  THREAD_NATIVE_DEPTH = 25
+  OPENING = "([{\u2112\u1455".chars.freeze
+  CLOSING = ")]}\u211b\u1450".chars.freeze
+
   DEFAULT_ARTIFACT_PATH = File.expand_path("../artifacts/asciimath.json", __dir__)
 
   @artifact_path = DEFAULT_ARTIFACT_PATH
@@ -148,6 +153,13 @@ module Amath
     # stack running out inside the native call (threads other than the
     # main one have a 1 MiB machine stack by default).
     def run_engine(artifact, entry, text, mode, fallback:)
+      if mode == :native && too_deep_for_native_thread?(text)
+        Thread.current[:amath_last_engine] = :native
+        raise native_too_deep(text, "nesting depth over #{THREAD_NATIVE_DEPTH} off the main thread") unless fallback
+
+        return [run(artifact, entry, text, :ruby), :ruby]
+      end
+
       [run(artifact, entry, text, mode), mode]
     rescue NativeRecursionLimit => e
       Thread.current[:amath_last_engine] = :native
@@ -158,6 +170,26 @@ module Amath
       raise unless fallback && mode == :native
 
       [run(artifact, entry, text, :ruby), :ruby]
+    end
+
+    # Off the main thread the machine stack is small (1 MiB by default) and
+    # the native engine overflows it at about 40 levels of brackets. A Ruby
+    # stack overflow inside the native call crashes the process instead of
+    # raising, so deep input never reaches native there.
+    def too_deep_for_native_thread?(text)
+      return false if Thread.current.equal?(Thread.main)
+
+      depth = 0
+      max = 0
+      text.each_char do |char|
+        if OPENING.include?(char)
+          depth += 1
+          max = depth if depth > max
+        elsif CLOSING.include?(char)
+          depth -= 1 if depth.positive?
+        end
+      end
+      max > THREAD_NATIVE_DEPTH
     end
 
     def native_too_deep(text, detail)
