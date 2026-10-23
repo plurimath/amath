@@ -22,6 +22,12 @@ module Amath
     end
   end
 
+  # The input nests deeper than the engine that ran can handle: the native
+  # engine's recursion limit under +engine: :native+, or an exhausted Ruby
+  # stack. A ParseError so existing rescues keep working; the offsets are
+  # nil because no rejection position exists.
+  class NestingTooDeep < ParseError; end
+
   # The compiled grammar artifact is missing, unreadable, malformed, fails
   # its checksum, declares an unsupported shape, or cannot be compiled by the
   # installed Parsanol. Amath never falls back to another grammar.

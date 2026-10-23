@@ -24,6 +24,47 @@ module Amath
   @artifact = nil
   @lock = Mutex.new
 
+  # Raised inside Parsanol's native error path when the native engine hit its
+  # recursion limit, before Parsanol's own interpreter reparse runs (that
+  # reparse can take minutes or exhaust the Ruby stack on deep input).
+  class NativeRecursionLimit < Error; end
+  private_constant :NativeRecursionLimit
+
+  # Parsanol::Native.raise_native_parse_error translates a native failure.
+  # For a recursion-limit failure (which carries no position) it reparses
+  # through the Ruby interpreter with a Deepest reporter. While amath's own
+  # native call is running on this thread, this hook turns that failure into
+  # NativeRecursionLimit instead; every other failure, and every other
+  # caller of Parsanol, is unaffected.
+  module NativeRecursionGuard
+    MESSAGE = /\A(?:Maximum recursion depth \(\d+\) exceeded|Recursion limit exceeded\b)/
+    KEY = :amath_native_recursion_guard
+
+    def self.watch
+      outer = Thread.current[KEY]
+      Thread.current[KEY] = true
+      yield
+    ensure
+      Thread.current[KEY] = outer
+    end
+
+    def self.installed?
+      Parsanol::Native.singleton_class.ancestors.include?(self)
+    end
+
+    def raise_native_parse_error(error, grammar, input)
+      if Thread.current[KEY] && error.message.match?(MESSAGE)
+        raise NativeRecursionLimit, error.message.lines.first.strip, cause: nil
+      end
+
+      super
+    end
+  end
+
+  if Parsanol::Native.singleton_class.method_defined?(:raise_native_parse_error)
+    Parsanol::Native.singleton_class.prepend(NativeRecursionGuard)
+  end
+
   class << self
     # Parse +input+ and return the Parsanol tree (Hash/Array of
     # Parsanol::Slice leaves, or a plain "" for empty input).
@@ -37,13 +78,16 @@ module Amath
       end
       text = normalize_input(input)
       mode = resolve_engine(engine)
-      tree = run(artifact, entry, text, mode)
-      Thread.current[:amath_last_engine] = mode
+      tree, ran = run_engine(artifact, entry, text, mode, fallback: engine == :auto)
+      Thread.current[:amath_last_engine] = ran
       tree
     end
 
-    # The engine (:native or :ruby) that ran the last successful or rejected
-    # Amath.parse call on the current thread; nil before any parse.
+    # The engine (:native or :ruby) that produced the result (tree or
+    # rejection) of the last Amath.parse call on the current thread that
+    # reached the parser; nil before any parse. Under engine: :auto this is
+    # :ruby when the native engine hit its recursion limit and amath reran
+    # the input on the Ruby engine.
     def last_engine
       Thread.current[:amath_last_engine]
     end
@@ -98,13 +142,49 @@ module Amath
       end
     end
 
+    # Runs +mode+ and returns [tree, engine that produced it]. Under :auto
+    # (+fallback+), input nested too deeply for the native engine is rerun
+    # on the Ruby engine: either native's own recursion limit, or the Ruby
+    # stack running out inside the native call (threads other than the
+    # main one have a 1 MiB machine stack by default).
+    def run_engine(artifact, entry, text, mode, fallback:)
+      [run(artifact, entry, text, mode), mode]
+    rescue NativeRecursionLimit => e
+      Thread.current[:amath_last_engine] = :native
+      raise native_too_deep(text, e.message) unless fallback
+
+      [run(artifact, entry, text, :ruby), :ruby]
+    rescue NestingTooDeep
+      raise unless fallback && mode == :native
+
+      [run(artifact, entry, text, :ruby), :ruby]
+    end
+
+    def native_too_deep(text, detail)
+      NestingTooDeep.new(
+        "AsciiMath input nests deeper than the native engine's recursion limit " \
+        "(#{detail}); use engine: :ruby or engine: :auto",
+        input: text, byte_offset: nil, char_offset: nil
+      )
+    end
+
     def run(artifact, entry, text, mode)
       # Parsanol's mode: :native silently runs Ruby when the extension is
       # missing; resolve_engine has already checked availability.
-      artifact.parse(entry, text, mode: mode)
+      if mode == :native
+        NativeRecursionGuard.watch { artifact.parse(entry, text, mode: :native) }
+      else
+        artifact.parse(entry, text, mode: mode)
+      end
     rescue Parsanol::ParseFailed => e
       Thread.current[:amath_last_engine] = mode
       raise parse_error(e, artifact, entry, text)
+    rescue SystemStackError
+      Thread.current[:amath_last_engine] = mode
+      raise NestingTooDeep.new(
+        "AsciiMath input nests too deeply for the #{mode} engine (Ruby stack exhausted)",
+        input: text, byte_offset: nil, char_offset: nil
+      )
     rescue Parsanol::PARG::Error, Parsanol::GrammarError, Parsanol::Native::UnsupportedGrammar => e
       raise ArtifactError, "artifact #{@artifact_path} cannot be used: #{e.class}: #{e.message}"
     end
@@ -126,11 +206,19 @@ module Amath
     # later succeeded, so both can point past Parslet's position. The
     # interpreter reparse runs only on rejection. Returns nil if that
     # reparse unexpectedly accepts, so the caller falls back.
+    #
+    # The interpreter and deepest_leaf recurse once per nesting level; if
+    # that exhausts the stack on very deep input, this returns nil too.
     def parslet_position(artifact, entry, text)
-      artifact.root_atom(entry).parse(text, reporter: Parsanol::ErrorReporter::Tree.new)
+      cause = begin
+        artifact.root_atom(entry).parse(text, reporter: Parsanol::ErrorReporter::Tree.new)
+        nil
+      rescue Parsanol::ParseFailed => e
+        e.parse_failure_cause
+      end
+      cause && deepest_leaf(cause)
+    rescue SystemStackError
       nil
-    rescue Parsanol::ParseFailed => e
-      e.parse_failure_cause && deepest_leaf(e.parse_failure_cause)
     end
 
     # Parslet's rule: a node with children reports no position of its own.
@@ -141,11 +229,17 @@ module Amath
       children.map { |c| deepest_leaf(c) }.compact.max
     end
 
+    # Iterative: the cause tree of a deeply nested input is as deep as the
+    # input, so recursion here could exhaust the stack.
     def deepest_position(cause)
-      return nil unless cause
-
-      ([cause.position] + cause.children.compact.map { |c| deepest_position(c) })
-        .compact.max
+      deepest = nil
+      stack = [cause].compact
+      until stack.empty?
+        node = stack.pop
+        deepest = node.position if node.position && (deepest.nil? || node.position > deepest)
+        stack.concat(node.children.compact)
+      end
+      deepest
     end
 
     def char_offset(text, byte)
