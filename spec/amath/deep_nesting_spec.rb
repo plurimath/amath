@@ -116,11 +116,26 @@ RSpec.describe "Amath deep nesting" do
     end
   end
 
-  it "falls back to Ruby on a thread whose stack the native call exhausts" do
+  it "keeps deep input off the native engine on other threads" do
     input = "#{'(' * 100}x#{')' * 100}"
     tree, engine = Thread.new { [Amath.parse(input), Amath.last_engine] }.value
     expect(tree).to eq(Amath.parse(input, engine: :ruby))
-    expect(engine).to eq(:native).or eq(:ruby)
+    expect(engine).to eq(:ruby)
+  end
+
+  it "rejects deep input for engine: :native on other threads" do
+    input = "#{'(' * 100}x#{')' * 100}"
+    error = Thread.new do
+      Amath.parse(input, engine: :native)
+    rescue Amath::NestingTooDeep => e
+      e
+    end.value
+    expect(error).to be_a(Amath::NestingTooDeep)
+  end
+
+  it "still parses shallow input natively on other threads" do
+    engine = Thread.new { Amath.parse("(x)"); Amath.last_engine }.value
+    expect(engine).to eq(:native)
   end
 
   it "restores the guard flag after a native call" do
