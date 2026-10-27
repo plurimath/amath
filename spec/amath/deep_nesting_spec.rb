@@ -138,6 +138,70 @@ RSpec.describe "Amath deep nesting" do
     expect(engine).to eq(:native)
   end
 
+  # Each item of the {expr: item + {expr: ...}} chain of a parsed sum, without
+  # its :expr key, with every Slice as [text, offset]. Iterative: the chain is
+  # as deep as the sum is long.
+  def sum_items(tree)
+    items = []
+    node = tree
+    while node.is_a?(Hash) && node.key?(:expr)
+      node = node[:expr]
+      items << located(node.is_a?(Hash) ? node.except(:expr) : node)
+    end
+    items
+  end
+
+  def located(tree, shift = 0)
+    case tree
+    when Hash then tree.transform_values { |v| located(v, shift) }
+    when Array then tree.map { |v| located(v, shift) }
+    when Parsanol::Slice then [tree.to_s, tree.offset + shift]
+    else tree
+    end
+  end
+
+  # The items of the sum of +count+ +term+s joined by " + ", from the parse
+  # of one +term+ shifted to each term's offset.
+  def expected_sum_items(term, count, engine)
+    one = Amath.parse(term, engine: engine)[:expr]
+    step = term.bytesize + 3
+    (0...count).flat_map do |i|
+      item = located(one, i * step)
+      plus = { sequence: { symbol: ["+", (i * step) + term.bytesize + 1] } }
+      i == count - 1 ? [item] : [item, plus]
+    end
+  end
+
+  # Sums and sequences are parsed as repetitions and renested by
+  # Amath::Renester, so their length costs no recursion depth on either
+  # engine (Plurimath#transform_depth_spec: 750 and 800 terms).
+  engines = %i[native ruby]
+  [["x", 800], ["x", 2000], ["x", 5000], ["sqrt x", 800]].each do |term, count|
+    engines.each do |engine|
+      it "parses a sum of #{count} #{term.inspect} terms on engine: #{engine}" do
+        input = Array.new(count, term).join(" + ")
+        tree = Amath.parse(input, engine: engine)
+        expect(Amath.last_engine).to eq(engine)
+        expect(sum_items(tree)).to eq(expected_sum_items(term, count, engine))
+      end
+    end
+  end
+
+  it "parses a long sum of matrices and matrix fractions on both engines" do
+    terms = ["[[1,2],[3,4]]", "[[1,2],[3,4]]/x"]
+    input = Array.new(400) { |i| terms[i % 2] }.join(" + ")
+    native, ruby = %i[native ruby].map do |engine|
+      leaves(Amath.parse(input, engine: engine)).map { |s| [s.to_s, s.offset] }
+    end
+    expect(native).to eq(ruby)
+    expect(native.last).to eq(["x", input.bytesize - 1])
+  end
+
+  it "keeps a long sum on the native engine under :auto" do
+    Amath.parse(Array.new(2000, "x").join(" + "))
+    expect(Amath.last_engine).to eq(:native)
+  end
+
   it "restores the guard flag after a native call" do
     Amath.parse("#{'(' * 200}x")
     expect(Thread.current[Amath::NativeRecursionGuard::KEY]).to be_nil

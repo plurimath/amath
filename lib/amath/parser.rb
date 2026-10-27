@@ -10,7 +10,9 @@ module Amath
       entry = entry_for(decimal)
       text = normalize_input(input)
       mode = Engine.resolve(engine)
-      Engine.run(Amath.artifact, entry, text, mode, fallback: engine == :auto)
+      tree = Engine.run(Amath.artifact, entry, text, mode,
+                        fallback: engine == :auto)
+      Renester.call(tree)
     end
 
     def entry_for(decimal)

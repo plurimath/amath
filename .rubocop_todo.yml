@@ -104,6 +104,7 @@ RSpec/ExampleLength:
   Exclude:
     - 'spec/amath/deep_nesting_spec.rb'
     - 'spec/amath/engine_unit_spec.rb'
+    - 'spec/amath/renester_unit_spec.rb'
     - 'spec/amath/error_position_spec.rb'
     - 'spec/amath/parse_spec.rb'
     - 'spec/amath/uncertainty_spec.rb'
@@ -140,6 +141,7 @@ RSpec/MultipleExpectations:
     - 'spec/amath/engine_spec.rb'
     - 'spec/amath/error_position_spec.rb'
     - 'spec/amath/native_recursion_guard_unit_spec.rb'
+    - 'spec/amath/renester_unit_spec.rb'
     - 'spec/amath/parse_spec.rb'
     - 'spec/amath/uncertainty_spec.rb'
 

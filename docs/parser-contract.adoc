@@ -121,6 +121,18 @@ other than the main one, the native call can also exhaust the thread's Ruby
 stack (1 MiB by default) much earlier (at about 40 levels of `(` on x86_64 Linux); Ruby reports
 that as `SystemStackError`.
 
+Length is not depth. A run of terms (a sum such as `x + x + ... + x`, a
+sequence of symbols, a comma list) is parsed as a repetition, not by one
+nested rule call per term, so neither engine gets deeper as the run gets
+longer. The tree is still the nested one, `{expr: term + {expr: ...}}`, one
+level per term: amath rebuilds it after the engine returns, without
+recursion (`Amath::Renester`), with the same keys, order, slices and
+offsets as the recursive grammar produced. Code that walks the returned
+tree recursively must still be ready for one level per term. When the
+input after a run fails to parse, the grammar falls back to its recursive
+rule to find the same tree or rejection as before; such input can still
+hit the limits below.
+
 For such a recursion-limit failure Parsanol's own error path would reparse
 the input through its Ruby interpreter with a diagnostic reporter, which on
 deep input takes minutes or exhausts the stack. amath therefore hooks
