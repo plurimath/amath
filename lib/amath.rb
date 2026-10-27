@@ -17,6 +17,7 @@ module Amath
   autoload :Engine, "amath/engine"
   autoload :ErrorPosition, "amath/error_position"
   autoload :Parser, "amath/parser"
+  autoload :Renester, "amath/renester"
 
   # Decimal marker => artifact entry name.
   DECIMAL_ENTRIES = Configuration::DECIMAL_ENTRIES

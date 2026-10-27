@@ -6,7 +6,7 @@
 #   BUNDLE_GEMFILE=... BUNDLE_PATH=... ruby scripts/compile.rb [--determinism]
 #
 # The bundle named by BUNDLE_GEMFILE must provide the `parsanol` executable
-# (1.3.107 was used for the committed artifact). Steps:
+# (1.3.109 was used for the committed artifact). Steps:
 #   1. scripts/generate_grammar.rb --check (the .parg matches its inputs)
 #   2. bundle exec parsanol parg compile  -> artifacts/asciimath.json
 #   3. bundle exec parsanol parg check    (artifact matches source + compiler)

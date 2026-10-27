@@ -82,6 +82,8 @@ The native engine has a recursion limit (roughly 100 levels of nested
 brackets); by default amath parses deeper input with the Ruby engine, while
 `engine: :native` raises `Amath::NestingTooDeep`, a kind of
 `Amath::ParseError`.
+Long sums and sequences (thousands of terms) are not nesting: both engines
+parse them without going deeper as the expression gets longer.
 `Amath.last_engine` tells you which engine handled the last call.
 
 The exact rules for trees, positions, engines and errors are in
