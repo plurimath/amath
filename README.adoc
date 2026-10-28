@@ -97,6 +97,9 @@ input
 It also reads the measurement-uncertainty forms `ustd(...)`, `uexp(...)` and
 `ucov(...)` that Plurimath turns into uncertainty nodes
 (https://github.com/plurimath/plurimath/issues/493[plurimath/plurimath#493]).
+Shared exponents can be written as `ustd((3.85, 0.23)e4)` or
+`ustd(680(41)e-3)`; see the link:docs/parser-contract.adoc[parser contract]
+for the parse-tree fields and the corresponding expanded/interval call forms.
 
 It has not been released to RubyGems yet.
 
