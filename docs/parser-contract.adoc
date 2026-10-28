@@ -48,6 +48,39 @@ this document.
 exactly (Plurimath's transform does) need an adapter; that is the caller's
 concern.
 
+=== Shared exponents in uncertainty calls
+
+An uncertainty call can put its measured fields in a group followed immediately
+by `e` and a signed or unsigned integer exponent:
+
+[source,asciimath]
+----
+ustd((3.85, 0.23)e4)
+ustd(680(41)e-3)
+uexp((3.85, 0.23)e+4, 2, 0.95)
+ucov((1.024, 0.983, 1.088)e-3, 0.95, shortest)
+----
+
+These forms add `shared_exponent` to the existing `uncertainty` hash. Its
+value is the original `Parsanol::Slice` for the exponent digits and optional
+sign, without the `e`. All mantissas, concise digits, units and dimensionless
+coverage fields remain unchanged source slices with their original byte offsets.
+Calls without an exponent keep their existing trees.
+
+The consuming reader shifts the decimal point exactly in the value and
+magnitude, or in the value and both interval endpoints. For concise notation,
+it first derives the magnitude from the mantissa's decimal places. Thus
+`ustd(680(41)e-3)` means value `0.680` and magnitude `0.041`.
+Coverage factors and probabilities are not scaled. No float conversion is
+needed, and amath does not replace source slices with calculated text.
+
+Whitespace before `e`, incomplete exponents and a minus sign on a magnitude
+remain outside the uncertainty syntax and follow the ordinary grammar fallback.
+The separate expression-language forms `(3.85 +/- 0.23)e4` and `680(41)e-3`
+remain ordinary AsciiMath here; this extension uses explicit uncertainty calls.
+The input/tree and consuming-reader decimal expectations are recorded in
+`corpora/uncertainty-shared-exponent.yml`.
+
 [[decimal]]
 == Decimal markers
 

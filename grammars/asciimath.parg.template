@@ -231,10 +231,20 @@ grammar Asciimath version "0.1.0" {
   unc_unit = unc_sep "\"unitsml(" (*(!")\"" any_char)) as unit ")\""
   unc_open = "(" *space
   unc_close = *space ")"
+  # Shared exponents apply only to the grouped measured fields (or to a
+  # concise value), never to dimensionless coverage factors/probabilities.
+  # Preserve each mantissa and exponent as original source slices; the
+  # consuming reader performs the exact decimal-place shift without floats.
+  unc_shared_exponent = "e" (["+" / "-"] 1*digit) as shared_exponent
+  unc_measured_pair = unc_value unc_sep (unc_number) as magnitude
+  unc_scaled_pair = unc_open unc_measured_pair unc_close unc_shared_exponent
+  unc_measured_interval = unc_value unc_sep (unc_number) as lower unc_sep (unc_number) as upper
+  unc_scaled_interval = unc_open unc_measured_interval unc_close unc_shared_exponent
+  unc_standard = unc_scaled_pair / unc_value (unc_sep (unc_number) as magnitude / "(" (1*digit) as concise_digits ")" [unc_shared_exponent])
   uncertainty = (uncertainty_std / uncertainty_exp / uncertainty_cov) as uncertainty
-  uncertainty_std = ("ustd") as uncertainty_class unc_open unc_value (unc_sep (unc_number) as magnitude / "(" (1*digit) as concise_digits ")") [unc_unit] unc_close
-  uncertainty_exp = ("uexp") as uncertainty_class unc_open unc_value unc_sep (unc_number) as magnitude unc_sep (unc_number) as coverage_factor [unc_sep (unc_number) as coverage_probability] [unc_unit] unc_close
-  uncertainty_cov = ("ucov") as uncertainty_class unc_open unc_value unc_sep (unc_number) as lower unc_sep (unc_number) as upper unc_sep (unc_number) as coverage_probability [unc_sep ("shortest" / "symmetric") as interval_kind] [unc_unit] unc_close
+  uncertainty_std = ("ustd") as uncertainty_class unc_open unc_standard [unc_unit] unc_close
+  uncertainty_exp = ("uexp") as uncertainty_class unc_open (unc_scaled_pair / unc_measured_pair) unc_sep (unc_number) as coverage_factor [unc_sep (unc_number) as coverage_probability] [unc_unit] unc_close
+  uncertainty_cov = ("ucov") as uncertainty_class unc_open (unc_scaled_interval / unc_measured_interval) unc_sep (unc_number) as coverage_probability [unc_sep ("shortest" / "symmetric") as interval_kind] [unc_unit] unc_close
 
   # ---- helpers (no Parslet rule of their own) ----
   digit = %x30-39
