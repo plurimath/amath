@@ -1,0 +1,36 @@
+name: release
+
+on:
+  workflow_dispatch:
+    inputs:
+      next_version:
+        description: Release the current version (skip), or choose a version bump
+        required: true
+        type: choice
+        default: skip
+        options:
+          - skip
+          - patch
+          - minor
+          - major
+          - prerelease
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+      id-token: write
+    uses: metanorma/ci/.github/workflows/rubygems-release.yml@main
+    with:
+      next_version: ${{ inputs.next_version }}
+    secrets:
+      rubygems-api-key: ${{ secrets.PLURIMATH_CI_RUBYGEMS_API_KEY }}
+      pat_token: ${{ secrets.PLURIMATH_CI_PAT_TOKEN }}

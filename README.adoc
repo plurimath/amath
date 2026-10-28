@@ -100,6 +100,54 @@ It also reads the measurement-uncertainty forms `ustd(...)`, `uexp(...)` and
 
 It has not been released to RubyGems yet.
 
+== Releasing
+
+Maintainers publish through the `release` GitHub Actions workflow, using the
+shared https://github.com/metanorma/ci/blob/main/.github/workflows/rubygems-release.yml[Plurimath release infrastructure].
+It runs only when manually dispatched on `main`; pushing a tag does not start
+another publication. Merge the intended changes and require the `test` workflow
+on `main` to pass before releasing.
+
+=== Publisher setup
+
+The shared workflow uses `PLURIMATH_CI_RUBYGEMS_API_KEY` when that repository or
+organization secret is available. Otherwise it uses RubyGems Trusted Publishing
+(OIDC); `id-token: write` is enabled for that path. An existing
+`PLURIMATH_CI_PAT_TOKEN` can provide the GitHub permissions used by the shared
+workflow for version commits, tags and release notifications.
+
+For the first publication of `amath`, the RubyGems account that will own the gem
+can create a https://rubygems.org/profile/oidc/pending_trusted_publishers[pending trusted publisher]
+with these settings:
+
+* Gem name: `amath`
+* Repository owner: `plurimath`
+* Repository name: `amath`
+* Workflow filename: `rubygems-release.yml`
+* Workflow repository owner: `metanorma`
+* Workflow repository name: `ci`
+* Environment: leave blank, matching this workflow
+
+The workflow filename belongs to the reusable workflow in `metanorma/ci`, not
+to the caller's `release.yml`. See the official
+https://guides.rubygems.org/trusted-publishing/#using-reusable-workflows[RubyGems reusable-workflow setup].
+Publisher registration or access to the API-key secret must be completed before
+publishing; adding this workflow alone does not configure a RubyGems account.
+
+=== First release
+
+The current gemspec version is `0.1.0`. After publisher setup and green tests:
+
+. Open *Actions* → *release* → *Run workflow*.
+. Select branch `main` and `next_version: skip` to publish the current version
+  without bumping it.
+. Check that the workflow succeeds and that RubyGems lists `amath` version
+  `0.1.0`, with the corresponding `v0.1.0` tag and GitHub Release.
+
+For later releases, select `patch`, `minor`, `major` or `prerelease` to let the
+shared workflow update the version before publishing. Use `skip` only when the
+current gemspec already contains the version intended for release.
+
 == License
 
 Copyright Ribose Inc. Licensed under the BSD 2-Clause License; see link:LICENSE.md[].
