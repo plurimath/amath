@@ -4,6 +4,11 @@ source "https://rubygems.org"
 
 gemspec
 
+# The artifact job in CI recompiles the grammar with the Parsanol version
+# recorded in artifacts/asciimath.checksums.txt, so a newer Parsanol release
+# cannot change the bytes it compares.
+gem "parsanol", ENV.fetch("PARSANOL_VERSION") if ENV["PARSANOL_VERSION"]
+
 gem "rake", "~> 13.0"
 gem "rspec", "~> 3.0"
 

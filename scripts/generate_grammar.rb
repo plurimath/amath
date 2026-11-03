@@ -227,8 +227,13 @@ class Generator
     lines.join("\n")
   end
 
+  # One entry per decimal marker, then its declared bindings: the single
+  # `root` capture bound whole, as plain data, for the typed model.
   def entries
-    markers.map { |m| "entry #{MARKER_ENTRIES.fetch(m)}: expression_tail__#{MARKER_ENTRIES.fetch(m)}" }.join("\n")
+    names = markers.map { |m| MARKER_ENTRIES.fetch(m) }
+    (names.map { |name| "entry #{name}: document__#{name}" } +
+      [""] +
+      names.map { |name| "bindings document__#{name} { root -> root (any) }" }).join("\n")
   end
 
   TOKEN = /"(?:[^"\\]|\\.)*"|\bas\s+\w+|%x[0-9A-Fa-f.\-]+|\b[A-Za-z_]\w*\b/

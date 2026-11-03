@@ -25,3 +25,18 @@ jobs:
           bundler-cache: true
       - run: bundle exec rspec
       - run: gem build amath.gemspec
+
+  artifacts:
+    name: artifacts (compile --determinism)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use the Parsanol version that compiled the committed artifact
+        run: echo "PARSANOL_VERSION=$(awk '/^compiler_version /{print $2}' artifacts/asciimath.checksums.txt)" >> "$GITHUB_ENV"
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4"
+          bundler-cache: true
+      - run: bundle exec ruby scripts/compile.rb --determinism
+      - name: Committed grammar and artifacts match the regeneration
+        run: git diff --exit-code -- grammars artifacts
