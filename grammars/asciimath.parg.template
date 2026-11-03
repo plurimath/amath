@@ -203,6 +203,12 @@ grammar Asciimath version "0.1.0" {
   # expression_tail) is not looped: it runs only after alternatives 3-6
   # failed at the same position, and nests one level per such power sign.
   expression_tail = expression_tail_chain / expression_tail_rec
+  # The entry rule: the whole expression under one `root` capture, so the
+  # declared bindings (one `root -> root (any)` record per entry, after the
+  # entries below) carry the complete tree to the typed model in one
+  # binding. Amath unwraps `root` before anything else reads the tree, so
+  # the internal raw tree is exactly expression_tail's.
+  document = (expression_tail) as root
   # Keyed by its first part as expression_chain is.
   expression_tail_chain = (&(!left_right_tail_closed left_right_frac) expression_tail_chain_body) as left_right / (expression_tail_chain_body) as expr
   expression_tail_chain_body = (1*(expression_tail_link) (expression_tail_head / expression_tail_rest) as amath_end) as amath_chain

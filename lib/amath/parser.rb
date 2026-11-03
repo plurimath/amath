@@ -12,7 +12,18 @@ module Amath
       mode = Engine.resolve(engine)
       tree = Engine.run(Amath.artifact, entry, text, mode,
                         fallback: engine == :auto)
-      Renester.call(tree)
+      Renester.call(unwrap_root(tree))
+    end
+
+    # The bundled grammar's entry rules put the whole expression under one
+    # `root` capture, the capture its declared bindings read. The tree
+    # Amath returns is the expression itself, as before that capture
+    # existed. An artifact without the capture (test fixtures) is returned
+    # unchanged.
+    def unwrap_root(tree)
+      return tree unless tree.instance_of?(Hash) && tree.size == 1 && tree.key?(:root)
+
+      tree[:root]
     end
 
     def entry_for(decimal)

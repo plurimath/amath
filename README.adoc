@@ -22,7 +22,7 @@ https://github.com/parsanol/parsanol-ruby[Parsanol], and compiled into a
 checksummed artifact that the gem loads at runtime. The repository will hold:
 
 * `grammars/`: the grammar source.
-* `artifacts/`: the compiled artifact.
+* `artifacts/`: the compiled artifact and its declared binding artifacts.
 * `corpora/`: conformance cases with the input and the tree it must produce.
 
 == Installation

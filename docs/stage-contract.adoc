@@ -170,10 +170,9 @@ coordinates; the stage converts them before raising a public parse error.
 
 Use amath's existing regeneration shape: generate/check the grammar, compile
 the parse artifact, verify it against the source, and prove deterministic
-output. The current compile script runs a second compile with
-`--bindings all` when the grammar declares bindings. It reports no binding
-artifacts when no declarations exist; that report is not proof of a
-model-based stage.
+output. amath's compile script compiles with `--bindings all`, which emits one
+binding artifact per target with Parsanol 1.3.131 or later (earlier releases
+accept the flag and emit nothing), and verifies each emitted file.
 
 Stages adopting this profile declare the construction bindings and use that
 existing compiler step to emit the target artifacts. Consumers verify each
