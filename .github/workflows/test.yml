@@ -31,11 +31,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Use the Parsanol version that compiled the committed artifact
-        run: echo "PARSANOL_VERSION=$(awk '/^compiler_version /{print $2}' artifacts/asciimath.checksums.txt)" >> "$GITHUB_ENV"
+      # The artifact records the Parsanol version that compiled it and the
+      # Ruby whose Onigmo Unicode tables it embeds; regenerate with both.
+      - name: Use the Parsanol and Ruby versions that compiled the committed artifact
+        run: |
+          echo "PARSANOL_VERSION=$(awk '/^compiler_version /{print $2}' artifacts/asciimath.checksums.txt)" >> "$GITHUB_ENV"
+          echo "ARTIFACT_RUBY=$(jq -r .unicode_tables artifacts/asciimath.json | sed -E 's/.*Ruby ([0-9.]+)\)$/\1/')" >> "$GITHUB_ENV"
       - uses: ruby/setup-ruby@v1
         with:
-          ruby-version: "3.4"
+          ruby-version: ${{ env.ARTIFACT_RUBY }}
           bundler-cache: true
       - run: bundle exec ruby scripts/compile.rb --determinism
       - name: Committed grammar and artifacts match the regeneration

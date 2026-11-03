@@ -293,3 +293,8 @@ bytes for the parse artifact and all four binding artifacts.
 Parsanol checksum and binding version of every binding artifact. Parsanol
 1.3.130 and earlier accept `--bindings` but write no binding artifacts, so the
 compiler bundle needs 1.3.131 or later.
+
+The parse artifact also embeds the Unicode tables of the Ruby that compiled
+it (its `unicode_tables` field), so identical bytes need the same Parsanol
+version and the same Ruby. CI regenerates with both, read from the committed
+files.
