@@ -1,15 +1,27 @@
 = Amath parser contract
 :toc:
 
-This document is the contract between amath and its callers (first of all
-Plurimath's AsciiMath transform). It covers the public API, decimal markers,
-engine policy, errors and positions. Anything not written here is not part of
-the contract.
+The link:stage-contract.adoc[shared stage profile] defines the model-based
+target for amath, latexmath and unicodemath: one public `parse` API returning
+the typed LML language model, with raw parsing internal to tests and tooling.
+It owns the common preprocessing, engine, error, artifact, corpus-pin and
+release requirements.
 
-Runtime dependency: `parsanol ~> 1.3, >= 1.3.107`. amath never requires
-Plurimath or reads Plurimath constants.
+The notes below describe amath's current 0.1.x compatibility boundary, used
+by Plurimath's AsciiMath transform. They do not override the shared profile.
+The API/model migration is separate work: 0.2.0 changes the return boundary,
+and requires a published Plurimath release pinning `amath ~> 0.1.0` or already
+using the typed-model API before amath 0.2.0 publishes.
 
-== API
+AsciiMath-specific notes: input currently needs no language preprocessing;
+the decimal entries are `dot`, `comma` and `arabic`; shared-exponent captures
+and exact source-slice behavior are described below. These language rules
+remain pinned while the model representation changes.
+
+Runtime dependency on this main revision: `parsanol ~> 1.3, >= 1.3.129`.
+amath never requires Plurimath or reads Plurimath constants.
+
+== Current 0.1.x API (before the model migration)
 
 [source,ruby]
 ----

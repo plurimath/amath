@@ -1,0 +1,286 @@
+= Shared parser stage contract
+:toc:
+
+This profile defines the common shape of the amath, latexmath and
+unicodemath stage gems. Each stage owns its grammar, input processing and
+typed language model. Plurimath consumes that model through a thin mapper
+into its shared Formula tree. No stage depends on Plurimath at runtime.
+
+This is the target contract for the model-based APIs in
+https://github.com/plurimath/plurimath/issues/541[the rearchitecture roadmap].
+It does not claim that the current gems already implement every requirement.
+In particular, amath 0.1.x returns a raw tree; its model-based API is a
+breaking change for 0.2.0. Publishing this document changes no runtime API.
+See link:parser-contract.adoc[the AsciiMath compatibility notes] for the
+current implementation.
+
+== Stage contents and ownership
+
+Each language has one set of definitions, consumed by every target:
+
+. A PARG grammar under `grammars/`, with deterministic generation inputs
+  such as a template and a pinned vocabulary. The committed inputs are
+  sufficient to build offline. A provenance export from Plurimath records
+  an exact source commit; a normal build never reads a mutable Plurimath
+  checkout or its constants.
+. A compiled parse artifact and declared binding artifacts under
+  `artifacts/`. The bindings carry production-to-constructor mappings for
+  AST construction, not language semantics or writer behavior.
+. A typed language model declared through lutaml-model, with exported LML
+  declarations and checksums. Language transforms construct that model,
+  never `Plurimath::Math` classes. A generic wrapper around hashes, arrays
+  and slices alone does not satisfy this model contract.
+. A public parser, internal preprocessing and raw-tree boundaries,
+  conformance replay, packaging and CI for the supported engines.
+. A release with identified grammar, compiler, binding, LML and corpus
+  versions. Language-specific notes reference this profile rather than
+  defining a second copy of the common rules.
+
+Each stage records the mapping from grammar productions to its typed fields.
+Plurimath separately records the stage-model-to-Formula mapping. Shared
+Formula/Function/Core migration belongs to Plurimath; moving a language
+transform into a stage must not copy that common class hierarchy into it.
+LML declares model data. Target-specific writers remain separate from the
+declarations and from binding records.
+
+== One public parsing API
+
+All three stage gems expose the same parsing shape:
+
+[source,ruby]
+----
+model = Stage.parse(input, decimal: ".", engine: :auto)
+----
+
+`Stage` stands for `Amath`, `Latexmath` or `Unicodemath`. The result is the
+stage's typed LML language model, including a declared representation of
+empty input. It is not a raw Parsanol tree or a Plurimath Formula.
+
+There is no parallel public `parse_model` entry point. Raw parsing is an
+internal/test boundary and is not an alternative API for consumers.
+Diagnostic access such as amath's `last_engine` does not provide another
+parsing path. A stage documents its root model and fields, but never chooses
+a different public return boundary to preserve a legacy raw-tree API.
+
+`input` is a String. Normalize its encoding to valid UTF-8 before language
+preprocessing. Non-String input, invalid UTF-8 and strings that cannot be
+transcoded raise `ArgumentError`. Do not coerce numbers or other objects
+into source text.
+
+`decimal:` explicitly selects the decimal marker. Dot (`"."`), comma
+(`","`) and Arabic decimal separator (`"٫"`, U+066B) have declared grammar
+entries; unsupported values raise `ArgumentError`. There is no implicit
+locale lookup or cross-call mutable decimal setting. Preserve exact decimal
+source text in model data; a float conversion must not alter the contract.
+
+=== Engines
+
+`engine:` accepts `:auto`, `:ruby` and `:native`; any other value raises
+`ArgumentError`.
+
+[cols="1,3"]
+|===
+|Selection |Required behavior
+
+|`:ruby`
+|Use the Ruby engine only.
+
+|`:native`
+|Use the native engine or raise `Stage::EngineUnavailable`. Do not silently
+use Ruby. A native depth limit raises `Stage::NestingTooDeep`.
+
+|`:auto`
+|Use native where available, otherwise Ruby. A native recursion or stack
+limit may retry with Ruby. The result still obeys the same typed-model and
+corpus contract.
+|===
+
+Record the engine that produced the result or parse rejection in a
+thread-local diagnostic, with `nil` before any parser run. Under automatic
+depth fallback it identifies Ruby. It must not imply that an untested
+platform or every native internal operation has been verified.
+
+Engine choice cannot change accepted input, typed field values or declared
+writer outcomes. Parser engines (Ruby/native) and XML engines
+(Ox/Oga/Leptris) are different test axes. Slow-engine measurements do not
+justify silently dropping required parity cases.
+
+== Preprocessing and internal raw trees
+
+The public parser owns all language preprocessing and postprocessing needed
+to interpret the caller's text. Callers do not reproduce entity encoding,
+whitespace treatment, label handling, row-break restoration or text-command
+protection. A language that needs none, as amath currently does, documents
+that fact in its language notes.
+
+Keep the caller's normalized UTF-8 string separately from the grammar input.
+If preprocessing changes text length or encoding, retain a source mapping
+back to that caller string for public error positions. Do not expose
+entity-encoded offsets as if they were offsets into the original text.
+
+The internal/test boundary exposes the preprocessed text and raw grammar
+tree for parity capture. Preserve node/key kinds, array order, absent versus
+nil fields, slice text and raw byte offsets. Raw offsets refer to the exact
+grammar input; public error offsets refer to the normalized caller input.
+The raw-tree representation is not the public model and consumers do not
+depend on its leaf classes.
+
+Replay records the caller input/options, preprocessed input, raw tree and
+typed model separately. The facade mapper must also reproduce the fixed
+Formula/writer outcomes. A raw-tree match alone is not processing parity.
+
+== Errors and positions
+
+Each stage has its own namespace with this common error shape:
+
+`Stage::Error < StandardError`::
+Base for deliberately raised stage errors, except invalid arguments.
+
+`Stage::ParseError < Stage::Error`::
+The input is refused for the selected language/options. Full consumption is
+required; a valid prefix is not a successful partial parse. Expose `input`
+(normalized UTF-8 caller input), `byte_offset` (zero-based UTF-8 bytes) and
+`char_offset` (zero-based characters). Map positions through preprocessing.
+Human-readable message wording is not a parity contract; refusal categories
+and positioned outcomes are pinned by the corpus.
+
+`Stage::NestingTooDeep < Stage::ParseError`::
+The selected execution path cannot handle the input's depth. Offsets are
+`nil` when no rejection position is known, and `input` is set. This does not
+claim that the input is grammatically invalid. A Ruby stack exhaustion must
+not escape as an unclassified `SystemStackError`.
+
+`Stage::ArtifactError < Stage::Error`::
+A required parse, binding or model artifact is missing, malformed,
+unsupported, fails verification or does not match its paired artifacts.
+Never fall back to a different grammar or unchecked artifact.
+
+`Stage::EngineUnavailable < Stage::Error`::
+The caller explicitly selected an unavailable native engine.
+
+`ArgumentError`::
+Invalid input type/encoding, unsupported decimal marker or engine option.
+
+Character offsets count characters in the normalized UTF-8 string, not
+grapheme clusters. Multibyte input must have tests that distinguish byte
+offsets from character offsets. Internal grammar diagnostics may use other
+coordinates; the stage converts them before raising a public parse error.
+
+== Compilation and verification
+
+Use amath's existing regeneration shape: generate/check the grammar, compile
+the parse artifact, verify it against the source, and prove deterministic
+output. The current compile script runs a second compile with
+`--bindings all` when the grammar declares bindings. It reports no binding
+artifacts when no declarations exist; that report is not proof of a
+model-based stage.
+
+Stages adopting this profile declare the construction bindings and use that
+existing compiler step to emit the target artifacts. Consumers verify each
+binding artifact's kind, checksum, target and binding version, and pair its
+grammar identity/source hash with the parse artifact. Test tampering, wrong
+targets and wrong pairings. Do not introduce a separate handwritten target
+mapping that bypasses the declarations.
+
+Record the compiler, artifact edition and per-file checksums. Extend the
+manifest to cover emitted binding and LML artifacts as they are adopted;
+the parse-artifact checksum alone does not verify them. Verify exported
+LML declarations and their checksums too. A Ruby re-export comparison is
+not evidence of independent Rust or TS materialization. Unsupported model
+declarations must fail explicitly rather than disappear from the export.
+
+== Corpus pins and replay
+
+The authoritative corpus contract is
+https://github.com/plurimath/plurimath-testsuite/blob/6f8bc12602e6016290179f0939b6afd518ef44df/docs/stage-corpus-contract.adoc[stage
+layout revision 1], together with its
+https://github.com/plurimath/plurimath-testsuite/blob/6f8bc12602e6016290179f0939b6afd518ef44df/docs/tree-parity-contract.adoc[tree
+parity contract]. Their schemas and validator own the wire format; this
+profile does not redefine it.
+
+Data is stored at
+`stages/<language>/generations/<NNNNNN>/{provenance.yaml,payloads/<group>.yaml}`
+with an append-only `generations/<language>.yaml` ledger. Use `asciimath`,
+`latex` and `unicode` for these three gems. `roundtrip` is the shared
+cross-language lane. A new language key, including `pma`, requires a layout
+revision; it cannot be introduced by a stage data PR.
+
+A consumer commits `spec/fixtures/testsuite-pin.yml`, for example:
+
+[source,yaml]
+----
+schema: plurimath-stage/pin/1
+repository: https://github.com/plurimath/plurimath-testsuite
+commit: 6f8bc12602e6016290179f0939b6afd518ef44df
+language: asciimath
+generation: 1
+snapshot_digest: sha256:f33825074cc075f906aa96467f80b83ebbbd1729d3696d0f5613157ca0e14fa7
+----
+
+This is a valid layout example, not a claim that the copied facade rows
+already cover the new typed stage model. Stage adoption adds the missing
+raw/typed expectations and source provenance in a later generation.
+
+Before replay, run from an environment with the pinned testsuite checkout:
+
+[source,sh]
+----
+ruby "$TESTSUITE_CHECKOUT/scripts/validate-stages.rb" "$TESTSUITE_CHECKOUT" --pin spec/fixtures/testsuite-pin.yml
+----
+
+The validator checks the checkout commit, named generation (not the latest
+one), snapshot digest, payload integrity and nonempty inventory. The stage
+then replays every selected row, asserting the boundary each row declares:
+internal raw tree, typed model, refusal or facade/writer outcome through the
+appropriate integration adapter. A stage must not silently ignore existing
+facade rows that need an adapter. CI reports complete case counts and fails
+missing, duplicate or unhandled cases.
+
+A testsuite commit can advance without changing this language's generation.
+Upgrading the generation deliberately updates its commit/generation/digest
+with a reason.
+Published generations and earlier expected outcomes never change. Stage
+expectations may add producers beside the legacy oracle; they never replace
+that oracle to make parity pass. Keep per-payload provenance, exact source
+and dependency identities, and tracked upstream import checksums.
+
+== CI and packaging
+
+CI verifies deterministic grammar/artifacts, binding and LML pairings,
+standalone model construction without Plurimath, and the pinned generation
+on supported Ruby/native paths. Include negative artifact tests, multibyte
+positions, malformed input, empty input, depth behavior and unavailable
+native selection. A facade integration lane checks the Formula mapper and
+unchanged writer bytes. New targets replay the same generations as they
+arrive, with cross-runtime byte comparison; a Ruby-only declaration check
+does not substitute for those tests.
+
+Build and install the gem in isolation and smoke-test `parse` returning the
+typed model. Package the grammar/model artifacts and runtime data needed to
+load offline. Release and regeneration paths consume the committed inputs
+and verify their identities. Full suites run in CI; targeted local checks
+do not constitute full-suite evidence.
+
+== Versioning and publication order
+
+Breaking changes are allowed and carry an explicit version and migration
+contract. The gems need not share version numbers. The latexmath rebuild
+replaces its old 0.1.x public API as 1.0.0. UnicodeMath's first version is
+chosen at its release. Amath changes `parse` from raw tree to typed LML
+model in 0.2.0, not as an additive second parser API or a 0.1.x patch.
+
+Before amath 0.2.0 is published, publish a Plurimath release that either:
+
+* pins the old boundary with `amath ~> 0.1.0`; or
+* already consumes the typed-model API and declares compatible dependencies.
+
+Plurimath 0.11.13 through 0.11.17 use `amath ~> 0.1`, which permits 0.2.x.
+A source-only pin change, unpublished PR, green CI or release-ready packet
+does not satisfy this release-order gate. New Plurimath consumers install
+the published stage versions and replay their fixed corpus generations.
+
+Prepare the verified version, source commit, package/artifact checksums and
+CI receipts before requesting publication. Trusted publishing is configured
+and verified through the release process, not inferred from a workflow
+file's presence. This documentation does not dispatch a release or implement
+the amath API migration.
