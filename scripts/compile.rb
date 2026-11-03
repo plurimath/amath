@@ -39,6 +39,19 @@ run!(RbConfig.ruby, "scripts/generate_grammar.rb", "--check")
 run!("bundle", "exec", "parsanol", "parg", "compile", GRAMMAR, "-o", ARTIFACT)
 run!("bundle", "exec", "parsanol", "parg", "check", "--source", GRAMMAR, "--artifact", ARTIFACT)
 
+# The declared per-target binding artifacts (parsanol-ruby#432): when the
+# grammar declares bindings, re-run the compile with --bindings all — one
+# checksummed artifact_kind=parg-bindings payload per target lands beside
+# the artifact. With no declarations the step reports and moves on; the
+# declarations are the modeling decision this script deliberately does
+# not make.
+envelope = JSON.parse(File.binread(ARTIFACT))
+if envelope.fetch("entries").values.any? { |entry| Array(entry["bindings"]).any? }
+  run!("bundle", "exec", "parsanol", "parg", "compile", GRAMMAR, "-o", ARTIFACT, "--bindings", "all")
+else
+  puts "bindings: none declared — per-target binding artifacts not emitted"
+end
+
 if determinism
   Dir.mktmpdir do |dir|
     again = File.join(dir, "asciimath.json")
