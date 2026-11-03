@@ -92,6 +92,11 @@ The separate expression-language forms `(3.85 +/- 0.23)e4` and `680(41)e-3`
 remain ordinary AsciiMath here; this extension uses explicit uncertainty calls.
 The input/tree and consuming-reader decimal expectations are recorded in
 `corpora/uncertainty-shared-exponent.yml`.
+`scripts/generate_stage_cases.rb` turns each corpus file into a raw-tree
+payload for the `asciimath` stage generations in plurimath-testsuite, after
+checking that both engines return the same tree and that it carries the
+corpus texts. Its `--producer` option writes the provenance block for that
+generation.
 
 [[decimal]]
 == Decimal markers
