@@ -1,9 +1,9 @@
 # Written by scripts/compile.rb. Envelope checksum is Parsanol's own (PN 2);
 # the sha256 lines are of the files' bytes.
-artifact_checksum sha256:e90f836c851504dfcbd5b3d97c9224f2f1c8cb4d2167c10fc6f1d02a62646d43
-compiler_version 1.3.109
+artifact_checksum sha256:93aa473100cc5ee644ac5585e03aa276e7bdcbc0f42538ad73935400f4907804
+compiler_version 1.3.130
 source_hash sha256:566f8ba866e921308b3b947b2443a1278ffc1125e2b20a4afb5c14132f91f975
-artifacts/asciimath.json sha256:4b8392c6c92d201dde0aee5a87a7f24337a5b6367362c9bd21881b855e4609d2
+artifacts/asciimath.json sha256:96e38ebf1304a0a7cc1924a82b49564ae4d837284b7967185d12ebe463ebb636
 grammars/asciimath.parg sha256:566f8ba866e921308b3b947b2443a1278ffc1125e2b20a4afb5c14132f91f975
 data/vocabulary.json sha256:965b1f5c4e2d14ba7d045ba79c09097b42c311b737175c2199faca0cc87cf2a6
 entries dot comma arabic
