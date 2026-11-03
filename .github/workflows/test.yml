@@ -28,6 +28,14 @@ jobs:
           bundler-cache: true
       - run: bundle exec rspec
       - run: gem build amath.gemspec
+      # Regeneration step for the asciimath stage payloads in
+      # plurimath-testsuite: the corpus must turn into the same raw trees on
+      # both engines, and twice into the same bytes.
+      - name: Generate the testsuite stage payloads from corpora/
+        run: |
+          bundle exec ruby scripts/generate_stage_cases.rb --out "$RUNNER_TEMP/stage-a"
+          bundle exec ruby scripts/generate_stage_cases.rb --out "$RUNNER_TEMP/stage-b"
+          diff -r "$RUNNER_TEMP/stage-a" "$RUNNER_TEMP/stage-b"
 
   artifacts:
     name: artifacts (compile --determinism)
