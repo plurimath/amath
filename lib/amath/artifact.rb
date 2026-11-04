@@ -6,13 +6,14 @@ module Amath
   # The compiled grammar artifact Amath parses with: loaded and verified
   # once per path, and reloaded after the path changes.
   class Artifact
-    # Loads the Parsanol::PARG::Artifact at +path+ and checks it has an
-    # entry for every decimal marker. Every load failure is an ArtifactError.
-    def self.load(path)
+    # Loads the Parsanol::PARG::Artifact at +path+ and checks it has every
+    # entry of +entries+ (by default one per decimal marker). Every load
+    # failure is an ArtifactError.
+    def self.load(path, entries = Configuration::DECIMAL_ENTRIES.values)
       raise ArtifactError, "artifact not found: #{path}" unless File.file?(path)
 
       artifact = Parsanol::PARG::Artifact.load(path)
-      missing = Configuration::DECIMAL_ENTRIES.values - artifact.entries
+      missing = entries - artifact.entries
       unless missing.empty?
         raise ArtifactError,
               "artifact #{path} lacks required entries: #{missing.join(', ')}"
@@ -30,8 +31,9 @@ module Amath
 
     attr_reader :path
 
-    def initialize(path)
+    def initialize(path, entries: Configuration::DECIMAL_ENTRIES.values)
       @path = path
+      @entries = entries
       @loaded = nil
       @bindings = nil
       @lock = Mutex.new
@@ -48,7 +50,7 @@ module Amath
 
     # The Parsanol::PARG::Artifact at #path, loaded on first use.
     def fetch
-      @lock.synchronize { @loaded ||= self.class.load(@path) }
+      @lock.synchronize { @loaded ||= self.class.load(@path, @entries) }
     end
 
     # The declared Ruby binding artifact beside #path, verified and paired

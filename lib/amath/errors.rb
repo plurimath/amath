@@ -12,13 +12,16 @@ module Amath
   # input (Parsanol's native unit); +char_offset+ counts characters, the
   # unit Parslet used.
   class ParseError < Error
-    attr_reader :input, :byte_offset, :char_offset
+    attr_reader :input, :byte_offset, :char_offset, :category
 
-    def initialize(message, input:, byte_offset:, char_offset:)
+    # +category+: for a pma refusal, the rule the input breaks
+    # (Amath::Pma::Refusal::CATEGORIES); nil for dialect L.
+    def initialize(message, input:, byte_offset:, char_offset:, category: nil)
       super(message)
       @input = input
       @byte_offset = byte_offset
       @char_offset = char_offset
+      @category = category
     end
   end
 

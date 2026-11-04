@@ -1,0 +1,66 @@
+schema_version: 1
+dialect: pma
+spec: plurimath docs/pma.adoc
+contract: Every refused example of the specification, and the forms it leaves
+  open, which version 1 refuses. Each is an Amath::ParseError with this
+  category and position (byte_offset, char_offset) on both engines.
+cases:
+- {id: ctor.arity.uexp, input: 'uexp(10.0, 0.3)', category: constructor-arity, byte_offset: 14, char_offset: 14}
+- {id: ctor.arity.quoted_unit, input: 'ustd(1.230, 0.004, "unitsml(g)")', category: constructor-arity, byte_offset: 17, char_offset: 17}
+- {id: ctor.argument.signed_magnitude, input: 'ustd(1.2, -0.1)', category: constructor-argument, byte_offset: 10, char_offset: 10}
+- {id: ctor.argument.exponent, input: 'ustd(1.2e3, 0.1)', category: constructor-argument, byte_offset: 8, char_offset: 8}
+- {id: ctor.argument.interval_kind, input: 'ucov(1.024, 0.983, 1.088, 0.95, probabilistically-symmetric)', category: constructor-argument, byte_offset: 30, char_offset: 30}
+- {id: adjacency.reserved_word, input: 'ustd (1.2, 0.1)', category: adjacency, byte_offset: 4, char_offset: 4}
+- {id: adjacency.exponent, input: '(3.85 +/- 0.23) e4', category: adjacency, byte_offset: 16, char_offset: 16}
+- {id: adjacency.plus_minus, input: '(10.3 + / - 0.2)', category: adjacency, byte_offset: 6, char_offset: 6}
+- {id: adjacency.diff, input: 'diff ((5.0 +/- 0.1) unit(K))', category: adjacency, byte_offset: 0, char_offset: 0}
+- {id: reserved.ustd, input: 'ustd', category: reserved-word, byte_offset: 4, char_offset: 4}
+- {id: reserved.unit, input: 'unit', category: reserved-word, byte_offset: 0, char_offset: 0}
+- {id: reserved.quantity_call, input: 'quantity(x)', category: reserved-word, byte_offset: 0, char_offset: 0}
+- {id: reserved.quantity, input: 'quantity', category: reserved-word, byte_offset: 0, char_offset: 0}
+- {id: unit.quoted, input: 'unit("m")', category: unit-expression, byte_offset: 6, char_offset: 6}
+- {id: unit.unknown, input: 'unit(furlongs)', category: unit-expression, byte_offset: 9, char_offset: 9}
+- {id: unit.empty, input: 'unit()', category: unit-expression, byte_offset: 5, char_offset: 5}
+- {id: unit.depth_9, input: 'unit(((((((((m))))))))))', category: unit-expression, byte_offset: 23, char_offset: 23}
+- {id: unit.attached_unknown, input: '(10.3 +/- 0.2) unit(furlongs)', category: unit-expression, byte_offset: 24, char_offset: 24}
+- {id: unit.non_ascii, input: 'unit(Ωfurlong)', category: unit-expression, byte_offset: 5, char_offset: 5}
+- {id: attach.second_unit_non_ascii, input: '(10.3 +/- 0.2) unit(µm) unit(m)', category: unit-attachment, byte_offset: 25, char_offset: 24}
+- {id: pm.plus_minus, input: '(10.3 +- 0.2)', category: plus-minus-spelling, byte_offset: 6, char_offset: 6}
+- {id: pm.word, input: '(10.3 pm 0.2)', category: plus-minus-spelling, byte_offset: 6, char_offset: 6}
+- {id: pm.sign, input: '(10.3 ± 0.2)', category: plus-minus-spelling, byte_offset: 6, char_offset: 6}
+- {id: measured.signed_magnitude, input: '(10.3 +/- -0.2)', category: measured-literal, byte_offset: 10, char_offset: 10}
+- {id: measured.letter, input: '(x +/- 0.2)', category: measured-literal, byte_offset: 1, char_offset: 1}
+- {id: measured.unbracketed, input: '10.3 +/- 0.2', category: measured-literal, byte_offset: 0, char_offset: 0}
+- {id: exponent.incomplete, input: '(3.85 +/- 0.23)e', category: shared-exponent, byte_offset: 15, char_offset: 15}
+- {id: exponent.decimal, input: '(3.85 +/- 0.23)e4.5', category: shared-exponent, byte_offset: 17, char_offset: 17}
+- {id: exponent.relative, input: '(3.85 +/- 2%)e4', category: shared-exponent, byte_offset: 13, char_offset: 13}
+- {id: exponent.constructor, input: 'ustd((3.85, 0.23)e4)', category: shared-exponent, byte_offset: 5, char_offset: 5}
+- {id: exponent.plain_number, input: '1.2e3', category: shared-exponent, byte_offset: 0, char_offset: 0}
+- {id: relative.spaced, input: '(10.3 +/- 2 %)', category: relative, byte_offset: 12, char_offset: 12}
+- {id: relative.signed, input: '(10.3 +/- -2%)', category: relative, byte_offset: 10, char_offset: 10}
+- {id: relative.on_value, input: '(10.3% +/- 2)', category: relative, byte_offset: 5, char_offset: 5}
+- {id: tag.renamed_u, input: '(10.3 +/- 0.2 ~U)', category: distribution-tag, byte_offset: 14, char_offset: 14}
+- {id: tag.type_b, input: '(10.3 +/- 0.2 ~typeB)', category: distribution-tag, byte_offset: 14, char_offset: 14}
+- {id: tag.spaced, input: '(10.3 +/- 0.2 ~ rect)', category: distribution-tag, byte_offset: 14, char_offset: 14}
+- {id: tag.unknown, input: '(10.3 +/- 0.2 ~gauss)', category: distribution-tag, byte_offset: 14, char_offset: 14}
+- {id: tag.outside, input: '(10.3 +/- 0.2) ~rect', category: distribution-tag, byte_offset: 15, char_offset: 15}
+- {id: tag.before_plus_minus, input: '(10.3 ~rect +/- 0.2)', category: distribution-tag, byte_offset: 6, char_offset: 6}
+- {id: tag.constructor, input: 'ustd(1.2, 0.1 ~rect)', category: distribution-tag, byte_offset: 14, char_offset: 14}
+- {id: attach.second_unit, input: '(10.3 +/- 0.2) unit(cm) unit(m)', category: unit-attachment, byte_offset: 24, char_offset: 24}
+- {id: attach.inside_constructor, input: 'ustd(1.230, 0.004, unit(g))', category: unit-attachment, byte_offset: 17, char_offset: 17}
+- {id: attach.plain_number, input: '9.81 unit(m/s^2)', category: unit-attachment, byte_offset: 0, char_offset: 0}
+- {id: attach.diff_plain_number, input: 'diff(5 unit(K))', category: unit-attachment, byte_offset: 5, char_offset: 5}
+- {id: quantity.assertion, input: 'unit(J::energy)', category: quantity-assertion, byte_offset: 6, char_offset: 6}
+- {id: quantity.whole, input: 'unit(N*m::torque)', category: quantity-assertion, byte_offset: 8, char_offset: 8}
+- {id: quantity.no_quantity, input: 'unit(J::)', category: quantity-assertion, byte_offset: 6, char_offset: 6}
+- {id: quantity.no_unit, input: 'unit(::energy)', category: quantity-assertion, byte_offset: 5, char_offset: 5}
+- {id: quantity.twice, input: 'unit(J::energy::work)', category: quantity-assertion, byte_offset: 6, char_offset: 6}
+- {id: quantity.nested, input: 'unit((N::force)*m)', category: quantity-assertion, byte_offset: 7, char_offset: 7}
+- {id: concise.plain, input: '10.3(2)', category: concise, byte_offset: 0, char_offset: 0}
+- {id: concise.bracketed, input: '(10.3(2))', category: concise, byte_offset: 5, char_offset: 5}
+- {id: concise.exponent, input: '(680(41))e-3', category: concise, byte_offset: 4, char_offset: 4}
+- {id: concise.constructor, input: 'ustd(1.230(4))', category: concise, byte_offset: 10, char_offset: 10}
+- {id: none.empty, input: '', category: no-production, byte_offset: 0, char_offset: 0}
+- {id: none.expression, input: 'x + y', category: no-production, byte_offset: 0, char_offset: 0}
+- {id: none.diff_without_unit, input: 'diff(ustd(1.0, 0.1))', category: no-production, byte_offset: 19, char_offset: 19}
+- {id: none.two_terms, input: 'unit(m) unit(s)', category: unit-attachment, byte_offset: 8, char_offset: 8}

@@ -21,10 +21,12 @@ module Amath
   autoload :RawTree, "amath/raw_tree"
   autoload :Model, "amath/model"
   autoload :Symbols, "amath/symbols"
+  autoload :Pma, "amath/pma"
 
   # Decimal marker => artifact entry name.
   DECIMAL_ENTRIES = Configuration::DECIMAL_ENTRIES
   ENGINES = Configuration::ENGINES
+  DIALECTS = Configuration::DIALECTS
   THREAD_NATIVE_DEPTH = Configuration::THREAD_NATIVE_DEPTH
   OPENING = Configuration::OPENING
   CLOSING = Configuration::CLOSING
@@ -34,13 +36,24 @@ module Amath
 
   module_function
 
-  # Parse +input+ and return its typed model, an Amath::Model::Document
-  # (see docs/parser-contract.adoc). Empty input is a Document whose
-  # expression is nil.
+  # Parse +input+ and return its typed model (see docs/parser-contract.adoc).
+  #
+  # dialect: :legacy (the default) reads dialect L and returns an
+  # Amath::Model::Document; empty input is a Document whose expression is
+  # nil. dialect: :pma reads pma (plurimath docs/pma.adoc) with its own
+  # artifact and returns an Amath::Model::PmaDocument; a refusal is an
+  # Amath::ParseError with a #category. Any other dialect is an
+  # ArgumentError, raised before an artifact is loaded.
   #
   # The engine that ran is available afterwards from Amath.last_engine.
-  def parse(input, decimal: ".", engine: :auto)
-    Parser.parse(input, decimal: decimal, engine: engine)
+  def parse(input, dialect: :legacy, decimal: ".", engine: :auto)
+    case dialect
+    when :legacy then Parser.parse(input, decimal: decimal, engine: engine)
+    when :pma then Pma.parse(input, decimal: decimal, engine: engine)
+    else
+      raise ArgumentError,
+            "unknown dialect #{dialect.inspect} (use #{DIALECTS.map(&:inspect).join(', ')})"
+    end
   end
 
   # The engine (:native or :ruby) that produced the result (tree or
