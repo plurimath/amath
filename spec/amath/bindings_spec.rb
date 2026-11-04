@@ -35,7 +35,7 @@ RSpec.describe "declared binding artifacts" do
         expect(art.entry_names).to eq(Amath::DECIMAL_ENTRIES.values)
         art.entry_names.each do |name|
           expect(art.bindings(name).map(&:compact)).to eq(
-            [{ "capture" => "root", "path" => "root", "type" => "any" }],
+            [{ "capture" => "root", "path" => "expression", "type" => "any" }],
           )
         end
       end
@@ -78,12 +78,12 @@ RSpec.describe "declared binding artifacts" do
     end
   end
 
-  it "binds the whole parse tree, as plain data, under root" do
+  it "binds the whole parse tree, as plain data, to the model's expression" do
     art = load_binding.call(File.read(binding_path.call("ruby")), "ruby")
     art.pair_with!(parse_artifact)
     tree = parse_artifact.parse("dot", "x/y", mode: :ruby)
     bound = art.apply("dot", tree)
-    expect(bound.keys).to eq([:root])
-    expect(bound[:root]).to eq(Parsanol::PARG::Bindings.plain(tree[:root]))
+    expect(bound.keys).to eq([:expression])
+    expect(bound[:expression]).to eq(Parsanol::PARG::Bindings.plain(tree[:root]))
   end
 end

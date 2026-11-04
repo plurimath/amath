@@ -2,17 +2,37 @@
 
 module Amath
   # Checks the arguments of Amath.parse, picks the artifact entry for the
-  # decimal marker and hands the input to the engine.
+  # decimal marker, hands the input to the engine and builds the model.
   module Parser
     module_function
 
+    # The typed model (Amath::Model::Document) of +input+: the artifact's
+    # declared binding (`root -> expression (any)`) gives the tree as plain
+    # data, and lutaml-model builds the nested model from the declared
+    # attribute types. Empty input is a Document without expression.
     def parse(input, decimal:, engine:)
+      entry, text, tree = run(input, decimal: decimal, engine: engine)
+      return Model::Document.new(decimal: decimal) if text.empty?
+
+      bound = Amath.bindings.apply(entry, tree)
+      Model::Document.new(expression: bound.fetch(:expression), decimal: decimal)
+    end
+
+    # Internal: the legacy-shaped raw tree of +input+ (Hash/Array of
+    # Parsanol::Slice leaves, or a plain "" for empty input), as amath 0.1
+    # returned it. See RawTree; not public API.
+    def raw(input, decimal: ".", engine: :auto)
+      RawTree.legacy(run(input, decimal: decimal, engine: engine).last)
+    end
+
+    # [entry, input text, tree of the normalized grammar].
+    def run(input, decimal:, engine:)
       entry = entry_for(decimal)
       text = normalize_input(input)
       mode = Engine.resolve(engine)
       tree = Engine.run(Amath.artifact, entry, text, mode,
                         fallback: engine == :auto)
-      Renester.call(unwrap_root(tree))
+      [entry, text, tree]
     end
 
     # The bundled grammar's entry rules put the whole expression under one

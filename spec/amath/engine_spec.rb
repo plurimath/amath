@@ -6,25 +6,25 @@ RSpec.describe "Amath engine policy" do
 
     it "engine: :auto runs the native engine" do
       expect(Parsanol::Native).to receive(:parse).and_call_original
-      Amath.parse("sinh x")
+      Amath::Parser.raw("sinh x")
       expect(Amath.last_engine).to eq(:native)
     end
 
     it "engine: :native runs the native engine" do
       expect(Parsanol::Native).to receive(:parse).and_call_original
-      Amath.parse("sinh x", engine: :native)
+      Amath::Parser.raw("sinh x", engine: :native)
       expect(Amath.last_engine).to eq(:native)
     end
 
     it "engine: :ruby never calls the native engine" do
       expect(Parsanol::Native).not_to receive(:parse)
-      Amath.parse("sinh x", engine: :ruby)
+      Amath::Parser.raw("sinh x", engine: :ruby)
       expect(Amath.last_engine).to eq(:ruby)
     end
 
     it "both engines return the same tree" do
       input = "text(a b) sin x_1.5"
-      expect(Amath.parse(input, engine: :native)).to eq(Amath.parse(input, engine: :ruby))
+      expect(Amath::Parser.raw(input, engine: :native)).to eq(Amath::Parser.raw(input, engine: :ruby))
     end
   end
 
@@ -33,20 +33,20 @@ RSpec.describe "Amath engine policy" do
 
     it "engine: :native raises EngineUnavailable instead of running Ruby" do
       expect(Parsanol::Native).not_to receive(:parse)
-      expect { Amath.parse("sinh x", engine: :native) }
+      expect { Amath::Parser.raw("sinh x", engine: :native) }
         .to raise_error(Amath::EngineUnavailable, /native extension is not available/)
     end
 
     it "engine: :auto runs the Ruby engine" do
       expect(Parsanol::Native).not_to receive(:parse)
-      tree = Amath.parse("sinh x")
+      tree = Amath::Parser.raw("sinh x")
       expect(tree[:expr][:sequence][:unary][:unary_class].to_s).to eq("sinh")
       expect(Amath.last_engine).to eq(:ruby)
     end
   end
 
   it "keeps last_engine per thread" do
-    Amath.parse("x", engine: :ruby)
+    Amath::Parser.raw("x", engine: :ruby)
     other = Thread.new { Amath.last_engine }.value
     expect(other).to be_nil
     expect(Amath.last_engine).to eq(:ruby)

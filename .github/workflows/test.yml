@@ -26,8 +26,22 @@ jobs:
         with:
           ruby-version: ${{ matrix.ruby }}
           bundler-cache: true
+      # The asciimath stage rows (generation 2) the raw-tree parity spec
+      # compares with (spec/amath/testsuite_parity_spec.rb).
+      - uses: actions/checkout@v4
+        with:
+          repository: plurimath/plurimath-testsuite
+          ref: fac69501e826d6bc140ca02e37bd70333cefd988
+          path: tmp/plurimath-testsuite
+          persist-credentials: false
       - run: bundle exec rspec
+        env:
+          AMATH_TESTSUITE: ${{ github.workspace }}/tmp/plurimath-testsuite
       - run: gem build amath.gemspec
+      # The model classes and their LML export are generated from the
+      # normalized grammar; both must match a fresh generation.
+      - name: Generated model and LML export are current
+        run: bundle exec ruby scripts/generate_model.rb --check
       # Regeneration step for the asciimath stage payloads in
       # plurimath-testsuite: the corpus must turn into the same raw trees on
       # both engines, and twice into the same bytes.

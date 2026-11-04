@@ -44,7 +44,7 @@ RSpec.describe "Shared-exponent uncertainty syntax" do
       corpus.fetch("cases").each do |entry|
         it "preserves the exponent and measured source text for #{entry.fetch('id')}" do
           input = entry.fetch("input")
-          tree = Amath.parse(input, engine: engine)
+          tree = Amath::Parser.raw(input, engine: engine)
 
           expect(Amath.last_engine).to eq(engine)
           expect(texts(tree)).to eq(
@@ -60,7 +60,7 @@ RSpec.describe "Shared-exponent uncertainty syntax" do
       it "keeps uncertainty decimals independent of the selected ordinary-number marker" do
         [",", "٫"].each do |marker|
           node = uncertainty_nodes(
-            Amath.parse("ustd((3.85, 0.23)e4)", decimal: marker, engine: engine),
+            Amath::Parser.raw("ustd((3.85, 0.23)e4)", decimal: marker, engine: engine),
           ).fetch(0)
 
           expect(texts(node)).to eq(
@@ -73,7 +73,7 @@ RSpec.describe "Shared-exponent uncertainty syntax" do
 
       it "retains byte offsets after multibyte text and trailing operands" do
         input = 'text(é) + ustd((-3.850, 0.230)e+4) / x'
-        tree = Amath.parse(input, engine: engine)
+        tree = Amath::Parser.raw(input, engine: engine)
         node = uncertainty_nodes(tree).fetch(0)
 
         expect(texts(node)).to eq(
@@ -98,14 +98,14 @@ RSpec.describe "Shared-exponent uncertainty syntax" do
         "ucov((1.024, -0.983, 1.088)e-3, 0.95)",
       ].each do |input|
         it "keeps malformed uncertainty #{input.inspect} on the ordinary fallback" do
-          tree = Amath.parse(input, engine: engine)
+          tree = Amath::Parser.raw(input, engine: engine)
           expect(uncertainty_nodes(tree)).to be_empty
         end
       end
 
       ["(3.85 +/- 0.23)e4", "680(41)e-3", "ustd(3.85, 0.23)e4"].each do |input|
         it "keeps #{input.inspect} outside the new shared-exponent call forms" do
-          tree = Amath.parse(input, engine: engine)
+          tree = Amath::Parser.raw(input, engine: engine)
           expect(texts(tree).inspect).not_to include("shared_exponent")
         end
       end

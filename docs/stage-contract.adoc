@@ -9,10 +9,10 @@ into its shared Formula tree. No stage depends on Plurimath at runtime.
 This is the target contract for the model-based APIs in
 https://github.com/plurimath/plurimath/issues/541[the rearchitecture roadmap].
 It does not claim that the current gems already implement every requirement.
-In particular, amath 0.1.x returns a raw tree; its model-based API is a
-breaking change for 0.2.0. Publishing this document changes no runtime API.
-See link:parser-contract.adoc[the AsciiMath compatibility notes] for the
-current implementation.
+In particular, amath 0.1.x returned a raw tree; amath main now returns the
+typed model, a breaking change released as 0.2.0. See
+link:parser-contract.adoc[the amath parser contract] for its
+implementation.
 
 == Stage contents and ownership
 
@@ -37,6 +37,13 @@ Each language has one set of definitions, consumed by every target:
   defining a second copy of the common rules.
 
 Each stage records the mapping from grammar productions to its typed fields.
+The stages get that mapping by construction: each grammar generator
+normalizes capture shapes with the shared rules N1-N9 of
+`scripts/normalize_shapes.rb` (one kind per capture, captures only added),
+and the model classes are generated from the normalized captures. amath's
+use of the rules, the wrapper captures and the unwrap back to the legacy
+raw tree are described in link:parser-contract.adoc#normalization[the amath
+parser contract].
 Plurimath separately records the stage-model-to-Formula mapping. Shared
 Formula/Function/Core migration belongs to Plurimath; moving a language
 transform into a stage must not copy that common class hierarchy into it.

@@ -162,7 +162,7 @@ RSpec.describe "AsciiMath uncertainty syntax" do
       before { require_native! if engine == :native }
 
       def parse(input, engine)
-        Amath.parse(input, engine: engine).tap do
+        Amath::Parser.raw(input, engine: engine).tap do
           expect(Amath.last_engine).to eq(engine)
         end
       end

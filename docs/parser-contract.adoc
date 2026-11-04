@@ -7,25 +7,24 @@ the typed LML language model, with raw parsing internal to tests and tooling.
 It owns the common preprocessing, engine, error, artifact, corpus-pin and
 release requirements.
 
-The notes below describe amath's current 0.1.x compatibility boundary, used
-by Plurimath's AsciiMath transform. They do not override the shared profile.
-The API/model migration is separate work: 0.2.0 changes the return boundary,
-and requires a published Plurimath release pinning `amath ~> 0.1.0` or already
-using the typed-model API before amath 0.2.0 publishes.
+This document describes amath's implementation of that profile. The typed
+model replaces amath 0.1's raw-tree return value: it is a breaking change,
+released as 0.2.0, and a published Plurimath release pinning `amath ~> 0.1.0`
+or already using the typed model must come before amath 0.2.0.
 
-AsciiMath-specific notes: input currently needs no language preprocessing;
-the decimal entries are `dot`, `comma` and `arabic`; shared-exponent captures
-and exact source-slice behavior are described below. These language rules
-remain pinned while the model representation changes.
+AsciiMath-specific notes: input needs no language preprocessing; the decimal
+entries are `dot`, `comma` and `arabic`; shared-exponent captures and exact
+source-text behavior are described below.
 
-Runtime dependency on this main revision: `parsanol ~> 1.3, >= 1.3.131`.
-amath never requires Plurimath or reads Plurimath constants.
+Runtime dependencies on this main revision: `parsanol ~> 1.3, >= 1.3.131`
+and `lutaml-model ~> 0.8, >= 0.8.162`. amath never requires Plurimath or
+reads Plurimath constants.
 
-== Current 0.1.x API (before the model migration)
+== API
 
 [source,ruby]
 ----
-Amath.parse(input, decimal: ".", engine: :auto) # => tree
+Amath.parse(input, decimal: ".", engine: :auto) # => Amath::Model::Document
 Amath.last_engine                                # => :native, :ruby or nil
 Amath.native_available?                          # => true / false
 Amath.artifact_path                              # => String
@@ -42,23 +41,66 @@ position refers to that string.
 
 `engine`:: `:auto`, `:native` or `:ruby`. See <<engine>>.
 
-=== Successful result
+There is no second public parse method. The raw parse tree is internal
+(<<raw-tree>>).
 
-The return value is the Parsanol tree of the selected entry:
+=== Successful result: the typed model
 
-* `Hash` with Symbol keys, `Array` (order preserved), and `Parsanol::Slice`
-  leaves;
-* empty input returns a plain `""` (a `String`, not a `Slice`). This is the
-  grammar's end-of-input alternative and callers must handle it the same way
-  they handled Parslet's empty match.
+`Amath.parse` returns an `Amath::Model::Document`, a LutaML Model object:
 
-The tree's key names and nesting are defined by the grammar artifact
-(`artifacts/asciimath.json`) and are pinned by the conformance corpus, not by
-this document.
+`expression`:: the expression, an `Amath::Model::Expression`; `nil` for
+empty input (`""`), the declared empty representation.
+`decimal`:: the decimal marker the input was parsed with.
 
-`Parsanol::Slice` is not `Parslet::Slice`. Callers that check the leaf class
-exactly (Plurimath's transform does) need an adapter; that is the caller's
-concern.
+The model classes live under `Amath::Model`. Apart from `Document` and
+`MathSymbol` (`lib/amath/model.rb`) they are generated from the grammar by
+`scripts/generate_model.rb` into `lib/amath/model/nodes.rb`, one class per
+capture of the normalized grammar (<<normalization>>):
+
+* a capture that holds a node is a class with one attribute per key it can
+  hold;
+* a capture that holds a list is a collection of `<Capture>Item` elements;
+* a capture that holds text is a `String` attribute, the text as written.
+
+So an attribute has the same name and type wherever it occurs. A run of
+terms (a sum, a sequence) is one `expr.amath_chain` collection of
+`AmathChainItem` elements (`amath_step`, `amath_lr`, and a closing
+`amath_end`), not a nesting one level per term: a 3000-term sum is a list of
+6000 items.
+
+Numbers keep their source text, decimal marker included: under
+`decimal: ","`, `1,5` is the number text `"1,5"`. There is no float
+conversion anywhere in the model.
+
+The text of a catalog capture (`symbol`, `comma`, the parens `lparen`,
+`rparen`, `left`, `right`, `table_left`, `table_right`, and the `d`/`x` of a
+differential) is an `Amath::Model::MathSymbol`: `spelling` is the text as
+written, and `value` (the Unicode text) and `kind` (`symbol`, `open`,
+`close`, `paren`, or `unlisted` for text the catalog does not list) are
+derived from it through `Amath::Symbols`. The catalog is
+`data/asciimath-symbols.json`, exported once by `scripts/export_symbols.rb`
+from the Plurimath revision the grammar was transcribed from; it records each
+spelling's Unicode value, MathML element, kind and Plurimath class, so the
+Plurimath mapper can map symbols without a lookup of its own.
+
+Uncertainty calls are `Amath::Model::Uncertainty` objects whose fields
+(`uncertainty_class`, `value`, `magnitude`, `lower`, `upper`,
+`concise_digits`, `shared_exponent`, `coverage_factor`,
+`coverage_probability`, `interval_kind`, `unit`) are the source texts.
+
+Wrapper attributes (`literal`, `literal_2`, `list`, `empty`, `empty_list`)
+come from the shape normalization: `literal` holds text where the same slot
+can also hold a node, `empty` and `empty_list` mark an optional part that
+matched nothing.
+
+`model/asciimath.lml.json` is the LML export (`Lutaml::Model::Lml.export`,
+verified) of every model class; `scripts/generate_model.rb --check` in CI
+requires both the classes and the export to match a fresh generation.
+
+The model is read through its attributes. Serializing it through a
+LutaML format (`to_hash`, `to_yaml`) is not supported: lutaml-model 0.8.162
+compiles a serialization transformation for every path through the
+recursive class graph, which does not finish for this model.
 
 === Shared exponents in uncertainty calls
 
@@ -73,11 +115,12 @@ uexp((3.85, 0.23)e+4, 2, 0.95)
 ucov((1.024, 0.983, 1.088)e-3, 0.95, shortest)
 ----
 
-These forms add `shared_exponent` to the existing `uncertainty` hash. Its
-value is the original `Parsanol::Slice` for the exponent digits and optional
-sign, without the `e`. All mantissas, concise digits, units and dimensionless
-coverage fields remain unchanged source slices with their original byte offsets.
-Calls without an exponent keep their existing trees.
+These forms set `shared_exponent` on the `Uncertainty` model (in the raw
+tree, a `shared_exponent` key in the `uncertainty` hash). Its value is the
+source text of the exponent digits and optional sign, without the `e`. All
+mantissas, concise digits, units and dimensionless coverage fields remain
+unchanged source texts (raw-tree slices keep their byte offsets). Calls
+without an exponent are unchanged.
 
 The consuming reader shifts the decimal point exactly in the value and
 magnitude, or in the value and both interval endpoints. For concise notation,
@@ -174,11 +217,11 @@ that as `SystemStackError`.
 Length is not depth. A run of terms (a sum such as `x + x + ... + x`, a
 sequence of symbols, a comma list) is parsed as a repetition, not by one
 nested rule call per term, so neither engine gets deeper as the run gets
-longer. The tree is still the nested one, `{expr: term + {expr: ...}}`, one
-level per term: amath rebuilds it after the engine returns, without
-recursion (`Amath::Renester`), with the same keys, order, slices and
-offsets as the recursive grammar produced. Code that walks the returned
-tree recursively must still be ready for one level per term. When the
+longer. The model keeps that run as one flat `amath_chain` list, so it is
+as shallow as the input's bracket nesting, whatever the number of terms.
+(The internal raw tree is the legacy nested one, `{expr: term + {expr:
+...}}`, one level per term, rebuilt without recursion by
+`Amath::Renester`.) When the
 input after a run fails to parse, the grammar falls back to its recursive
 rule to find the same tree or rejection as before; such input can still
 hit the limits below.
@@ -245,14 +288,14 @@ UTF-8.
 Parsanol reports positions in *bytes*; Parslet reported them in *characters*.
 They differ as soon as the input contains non-ASCII text.
 
-* `Parsanol::Slice#offset` is a zero-based byte offset. Note that
-  `Parsanol::Slice#charpos` is an alias of `offset` and is *also* a byte
-  offset.
+* In the internal raw tree, `Parsanol::Slice#offset` is a zero-based byte
+  offset. Note that `Parsanol::Slice#charpos` is an alias of `offset` and is
+  *also* a byte offset. The model holds source texts without offsets.
 * `Amath::ParseError#byte_offset` is a byte offset and `#char_offset` is the
   character offset computed by amath.
 
-Example: in `text(é) x`, the leaf `x` has `offset == 9`, while it is
-character 8. To convert a byte offset to Parslet's character offset:
+Example: in `text(é) x`, the raw-tree leaf `x` has `offset == 9`, while it
+is character 8. To convert a byte offset to Parslet's character offset:
 
 [source,ruby]
 ----
@@ -273,14 +316,61 @@ on first use, and cached for the process. Assigning `Amath.artifact_path=`
 clears the cache; it exists for tests and tooling, not for selecting
 alternative grammars in production.
 
+[[normalization]]
+== Grammar shape normalization
+
+`scripts/generate_grammar.rb` expands `grammars/asciimath.parg.template`
+with `data/vocabulary.json`, reads every rule with Parsanol's PARG parser into
+a rule tree (`scripts/parg_rule_tree.rb`) and normalizes capture shapes with
+the shared rules of `scripts/normalize_shapes.rb` (the rules unicodemath and
+latexmath use, from the option-F proof of concept). Under Parslet's
+flattening one capture name can hold text, a hash or a list depending on the
+alternative that matched; the rules only ADD captures (which never changes
+what the grammar accepts) until every capture holds one kind:
+
+N1 text alternative:: text in a node slot becomes `(x) as literal`.
+N2 empty alternative:: `[x]` in a node slot becomes `x / "" as empty`.
+N3 list in node slot:: a list in a node slot becomes `(x) as list`.
+N4 list slot:: a capture of a repetition stays a list of nodes.
+N5 text sibling:: text beside nodes in a sequence becomes `literal`,
+`literal_2`, ...
+N6 forced rule:: a rule that can return text or a node is normalized once,
+at every call site.
+N7 presence capture:: a capture of a lookahead gets `"" as present`.
+N8 empty run:: a text run that can match nothing, at a named position,
+becomes `(1*(x)) as literal / "" as empty_list` (the legacy tree held `[]`).
+N9 catalog spelling:: catalog text becomes `((x) as spelling) as name`.
+
+Generation stops when a capture still holds two kinds, or only ever holds
+nil, and when a rewritten rule does not read back as its normalized tree.
+Besides `grammars/asciimath.parg` it writes
+`grammars/asciimath.wrappers.json` (the added captures and their kinds) and
+`grammars/asciimath.normalized-rules.json` (the normalized rule tree, the
+input of `scripts/generate_model.rb`). A capture that holds nil only when an
+optional part at a named position did not match (an unclosed paren's
+`rparen`) is a `nil` attribute.
+
+[[raw-tree]]
+== The internal raw tree
+
+`Amath::Parser.raw(input, decimal:, engine:)` returns the parse tree of the
+legacy Plurimath grammar, exactly as amath 0.1's `Amath.parse` returned it
+(Hash/Array with `Parsanol::Slice` leaves, a plain `""` for empty input). It
+is internal, for the stage-case generator and the parity specs, not public
+API. `Amath::RawTree` builds it from the normalized grammar's tree: it
+removes every wrapper capture listed in `grammars/asciimath.wrappers.json`,
+re-running Parsanol's merge of sequence results, and `Amath::Renester`
+rebuilds the legacy nesting of the flat chains. Parity is checked as
+`Renester.call(unwrap(raw)) == legacy tree`.
+
 == Declared bindings and regeneration
 
 Each entry rule puts the whole expression under one `root` capture and
-declares one binding for it, `root -> root (any)`: the complete tree as
-plain data, the input for the typed language model the stage profile
-requires. `Amath.parse`
-removes that capture before returning, so the tree keeps the shape
-described above.
+declares one binding for it, `root -> expression (any)`: the complete tree as
+plain data. `Amath.parse` applies it (`Amath.bindings`, the paired Ruby
+binding artifact) and builds `Document.new(expression: ...)`; lutaml-model
+constructs the nested model from the declared attribute types, with no
+hand-written tree walker.
 
 `scripts/compile.rb` compiles the grammar with `--bindings all`, which writes
 one declared binding artifact per Parsanol target beside the parse artifact:
