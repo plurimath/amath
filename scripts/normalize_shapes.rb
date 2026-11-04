@@ -25,14 +25,6 @@ require "set"
 #   N7 presence capture   a capture that always holds nil (it captures a
 #                         lookahead) becomes `(x "" as present) as name`,
 #                         so the model can tell it from an absent key
-#   N8 empty run          a repetition of min 0 whose elements are text, in
-#                         a node-bearing slot, becomes `(1*(x)) as literal /
-#                         "" as empty_list` (legacy [] when it matched
-#                         nothing, else the run's text)
-#   N9 catalog spelling   text captured under a catalog capture name (one
-#                         the language resolves through its symbol
-#                         catalog) becomes `((x) as spelling) as name`, so
-#                         the model can type it as a catalog symbol
 #
 # A wrapper never changes the slice it holds. WRAPPERS describes how the
 # test-only unwrap maps each wrapper back to the legacy value.
@@ -42,8 +34,6 @@ class ShapeNormalizer
     "empty" => "text: legacy produced the empty String \"\" (absent optional)",
     "list" => "list: legacy produced this list (an empty list was \"\")",
     "present" => "nil: legacy produced nil (a capture of a lookahead)",
-    "empty_list" => "empty list: legacy produced [] (a text run that matched nothing)",
-    "spelling" => "text: the catalog spelling, as legacy captured it",
   }.freeze
 
   Shape = Struct.new(:kinds, :hash_keys, :array_keys) do
@@ -59,10 +49,8 @@ class ShapeNormalizer
   attr_reader :rules, :counts, :captures, :sites
 
   # +normalized+: the rules were already normalized (shape queries only).
-  # +catalog+: capture names whose text is a catalog spelling (N9).
-  def initialize(rules, normalized: false, catalog: [])
+  def initialize(rules, normalized: false)
     @rules = deep_copy(rules)
-    @catalog = catalog.to_set
     @counts = Hash.new(0)
     @sites = Hash.new { |h, k| h[k] = Set.new }
     collisions = capture_names(@rules).select { |k| wrapper?(k) }
@@ -71,7 +59,6 @@ class ShapeNormalizer
 
   # Rewrites until every capture holds one kind. Returns self.
   def run
-    spell unless @catalog.empty?
     8.times do
       solve
       targets = @captures.select { |_, s| s.mixed? }.keys.to_set
@@ -111,10 +98,7 @@ class ShapeNormalizer
     if node.key?("alt") then node["alt"].map { |n| shape(n, named) }.reduce(:|)
     elsif node.key?("seq") then sequence(node["seq"].map { |n| shape(n, false) })
     elsif node.key?("as")
-      # The inner shape first: it may record a nested capture of the same
-      # name, which `@captures[name] |= shape(...)` would overwrite.
-      inner = shape(node["of"], true)
-      @captures[node["as"]] |= inner
+      @captures[node["as"]] |= shape(node["of"], true)
       Shape.of(:hash, [node["as"]])
     elsif node.key?("ref") then @rule_shapes[[node["ref"], named]]
     elsif node.key?("rep") then repetition(node, named)
@@ -123,10 +107,6 @@ class ShapeNormalizer
     else raise "unknown grammar node #{node.keys.inspect}"
     end
   end
-
-  # Wrappers whose value is always "" and whose legacy value is a
-  # constant ("" or nil): two of them merging into one key lose nothing.
-  CONSTANT_WRAPPERS = %w[empty present].freeze
 
   # Sequences where two parts can carry the same wrapper key (a merge
   # would drop one part's text). Empty after a sound #run.
@@ -137,9 +117,7 @@ class ShapeNormalizer
       k = n.keys.first
       if k == "seq"
         seen = Hash.new(0)
-        n["seq"].each do |c|
-          shape(c, false).hash_keys.each { |key| seen[key] += 1 if wrapper?(key) && !CONSTANT_WRAPPERS.include?(key) }
-        end
+        n["seq"].each { |c| shape(c, false).hash_keys.each { |key| seen[key] += 1 if wrapper?(key) } }
         found << "#{rule}: #{seen.select { |_, v| v > 1 }.keys.join(',')}" if seen.any? { |_, v| v > 1 }
       end
       case k
@@ -155,44 +133,12 @@ class ShapeNormalizer
   # Wrapper capture names the rewritten rules use, with their kind.
   def wrapper_list
     used = capture_names(@rules).select { |k| wrapper?(k) }.sort
-    used.to_h do |k|
-      [k, { "list" => "list", "empty" => "empty", "present" => "nil", "empty_list" => "empty_list" }.fetch(k, "text")]
-    end
+    used.to_h { |k| [k, { "list" => "list", "empty" => "empty", "present" => "nil" }.fetch(k, "text")] }
   end
 
   def wrapper?(key) = WRAPPERS.key?(key) || key.match?(/\Aliteral_\d+\z/)
 
   private
-
-  # N9: every catalog capture whose value is text (or optional text) gets
-  # its text under +spelling+. Runs once, before the shape rules.
-  def spell
-    solve
-    @rules.each_key do |name|
-      @current = name
-      @rules[name] = spell_node(@rules[name])
-    end
-  end
-
-  def spell_node(node)
-    k = node.keys.first
-    case k
-    when "seq", "alt" then { k => node[k].map { |c| spell_node(c) } }
-    when "rep", "look" then node.merge(k => spell_node(node[k]))
-    when "as"
-      inner = spell_node(node["of"])
-      if @catalog.include?(node["as"])
-        target = inner["tag"] == "maybe" ? inner["rep"] : inner
-        if shape(target, true).solid == Set[:string]
-          count("N9 catalog spelling")
-          spelled = { "as" => "spelling", "of" => target }
-          inner = inner["tag"] == "maybe" ? inner.merge("rep" => spelled) : spelled
-        end
-      end
-      { "as" => node["as"], "of" => inner }
-    else node
-    end
-  end
 
   def repetition(node, named)
     inner = shape(node["rep"], false)
@@ -257,18 +203,9 @@ class ShapeNormalizer
     end
   end
 
-  # A capture whose value is a repetition (N4) stays a list, unless the
-  # capture also holds a node elsewhere (then the repetition is a list in
-  # a node slot, N3). A run of text (no element is ever a node) is text,
-  # not a list (N8).
+  # A capture whose value is a repetition (N4) stays a list.
   def list_slot?(name, inner)
-    solid = @captures[name].solid
-    inner.key?("rep") && inner["tag"] != "maybe" && solid.include?(:array) && !solid.include?(:hash) &&
-      !text_run?(inner)
-  end
-
-  def text_run?(rep)
-    rep["min"].zero? && shape(rep["rep"], false).kinds.subset?(Set[:string, :nil])
+    inner.key?("rep") && inner["tag"] != "maybe" && @captures[name].solid.include?(:array)
   end
 
   def force_list(rep)
@@ -280,7 +217,7 @@ class ShapeNormalizer
   def force_hash(node, named)
     s = shape(node, named)
     return node if s.solid.subset?(Set[:hash])
-    return wrap(node, "literal", "N1 text alternative", named) if s.solid.subset?(Set[:string])
+    return wrap(node, "literal", "N1 text alternative") if s.solid.subset?(Set[:string])
 
     case node.keys.first
     when "alt" then { "alt" => node["alt"].map { |c| force_hash(c, named) } }
@@ -292,9 +229,6 @@ class ShapeNormalizer
 
         count("N2 empty alternative")
         { "alt" => [force_hash(node["rep"], false), { "as" => "empty", "of" => { "str" => "" } }] }
-      elsif text_run?(node)
-        count("N8 empty run")
-        { "alt" => [{ "as" => "literal", "of" => node.merge("min" => 1) }, { "as" => "empty_list", "of" => { "str" => "" } }] }
       elsif node["min"].zero?
         raise "list of min 0 in a node slot (#{@current}); not handled"
       else
@@ -313,7 +247,7 @@ class ShapeNormalizer
       count("N6 forced rule")
       saved = @current
       @current = name
-      @rules[name] = force_hash(@rules[name], named)
+      @rules[name] = force_hash(@rules[name], false)
       @current = saved
     end
     node
@@ -355,18 +289,13 @@ class ShapeNormalizer
   # A text wrapper around an optional part would hold nil (or []) when the
   # part is absent, so `[x] as w` is written `x as w / "" as empty` and
   # `0*n(x) as w` is written `1*n(x) as w / "" as empty` (same language).
-  # At a named position (+named+) legacy holds [] for an unmatched
-  # repetition, so the absent alternative is `"" as empty_list` (N8).
-  def wrap(node, name, rule, named = false)
+  def wrap(node, name, rule)
     count(rule)
     opt = optional(node)
     if name != "list" && opt
-      raise "an optional at a named position in #{@current}; not handled" if named && opt["tag"] == "maybe"
-
-      absent = named ? "empty_list" : "empty"
-      count(named ? "N8 empty run" : "N2 empty alternative")
+      count("N2 empty alternative")
       present = opt["tag"] == "maybe" ? opt["rep"] : opt.merge("min" => 1)
-      return { "alt" => [{ "as" => name, "of" => present }, { "as" => absent, "of" => { "str" => "" } }] }
+      return { "alt" => [{ "as" => name, "of" => present }, { "as" => "empty", "of" => { "str" => "" } }] }
     end
     { "as" => name, "of" => node }
   end

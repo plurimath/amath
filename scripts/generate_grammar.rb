@@ -16,7 +16,8 @@
 #   1. expand the template with the vocabulary (one rule per line)
 #   2. read every rule with Parsanol's PARG parser into a rule tree
 #      (scripts/parg_rule_tree.rb)
-#   3. normalize capture shapes (scripts/normalize_shapes.rb, rules N1-N9),
+#   3. normalize capture shapes (shared rules N1-N7 of
+#      scripts/normalize_shapes.rb, amath rules N8-N9 of scripts/amath_shapes.rb),
 #      so that every capture holds one kind; generation stops on a capture
 #      that still holds two kinds or only nil
 #   4. write each rewritten rule back in place of its line, and check that
@@ -26,7 +27,7 @@ require "json"
 require "digest"
 require "set"
 require_relative "parg_rule_tree"
-require_relative "normalize_shapes"
+require_relative "amath_shapes"
 
 ROOT = File.expand_path("..", __dir__)
 VOCAB = File.join(ROOT, "data/vocabulary.json")
@@ -398,7 +399,7 @@ end
 # Steps 2-4 over the expanded grammar +text+: [grammar, normalizer].
 def normalize(text)
   rules = PargRuleTree.read(text)
-  norm = ShapeNormalizer.new(rules, catalog: CATALOG).run
+  norm = AmathShapes.new(rules, catalog: CATALOG).run
   clash = norm.collisions
   abort "normalization leaves wrapper collisions: #{clash.join('; ')}" unless clash.empty?
 

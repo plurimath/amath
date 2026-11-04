@@ -29,7 +29,7 @@
 
 require "digest"
 require "json"
-require_relative "normalize_shapes"
+require_relative "amath_shapes"
 
 ROOT = File.expand_path("..", __dir__)
 RULES = File.join(ROOT, "grammars/asciimath.normalized-rules.json")
@@ -44,7 +44,7 @@ check = ARGV.delete("--check")
 abort "usage: ruby scripts/generate_model.rb [--check]" unless ARGV.empty?
 
 doc = JSON.parse(File.read(RULES, encoding: "UTF-8"))
-shapes = ShapeNormalizer.new(doc.fetch("rules"), normalized: true)
+shapes = AmathShapes.new(doc.fetch("rules"), normalized: true)
 caps = shapes.solve
 abort "the normalized grammar has no #{TREE} capture" unless caps.key?(TREE)
 

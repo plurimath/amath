@@ -38,8 +38,9 @@ Each language has one set of definitions, consumed by every target:
 
 Each stage records the mapping from grammar productions to its typed fields.
 The stages get that mapping by construction: each grammar generator
-normalizes capture shapes with the shared rules N1-N9 of
-`scripts/normalize_shapes.rb` (one kind per capture, captures only added),
+normalizes capture shapes with the shared rules N1-N7 of
+`scripts/normalize_shapes.rb` plus its own language rules (one kind per
+capture, captures only added),
 and the model classes are generated from the normalized captures. amath's
 use of the rules, the wrapper captures and the unwrap back to the legacy
 raw tree are described in link:parser-contract.adoc#normalization[the amath

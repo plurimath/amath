@@ -322,8 +322,9 @@ alternative grammars in production.
 `scripts/generate_grammar.rb` expands `grammars/asciimath.parg.template`
 with `data/vocabulary.json`, reads every rule with Parsanol's PARG parser into
 a rule tree (`scripts/parg_rule_tree.rb`) and normalizes capture shapes with
-the shared rules of `scripts/normalize_shapes.rb` (the rules unicodemath and
-latexmath use, from the option-F proof of concept). Under Parslet's
+the shared rules N1-N7 of `scripts/normalize_shapes.rb` (the file unicodemath
+and latexmath use, from the option-F proof of concept) and amath's rules N8
+and N9 with its corrections to the shared rules (`scripts/amath_shapes.rb`). Under Parslet's
 flattening one capture name can hold text, a hash or a list depending on the
 alternative that matched; the rules only ADD captures (which never changes
 what the grammar accepts) until every capture holds one kind:
