@@ -18,6 +18,9 @@ module Amath
   autoload :ErrorPosition, "amath/error_position"
   autoload :Parser, "amath/parser"
   autoload :Renester, "amath/renester"
+  autoload :RawTree, "amath/raw_tree"
+  autoload :Model, "amath/model"
+  autoload :Symbols, "amath/symbols"
 
   # Decimal marker => artifact entry name.
   DECIMAL_ENTRIES = Configuration::DECIMAL_ENTRIES
@@ -31,8 +34,9 @@ module Amath
 
   module_function
 
-  # Parse +input+ and return the Parsanol tree (Hash/Array of
-  # Parsanol::Slice leaves, or a plain "" for empty input).
+  # Parse +input+ and return its typed model, an Amath::Model::Document
+  # (see docs/parser-contract.adoc). Empty input is a Document whose
+  # expression is nil.
   #
   # The engine that ran is available afterwards from Amath.last_engine.
   def parse(input, decimal: ".", engine: :auto)
@@ -65,6 +69,11 @@ module Amath
   # The loaded Parsanol::PARG::Artifact, loaded and verified once.
   def artifact
     @artifact.fetch
+  end
+
+  # The artifact's declared Ruby bindings, paired with #artifact.
+  def bindings
+    @artifact.bindings
   end
 end
 

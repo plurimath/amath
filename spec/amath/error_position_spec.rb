@@ -11,7 +11,7 @@ RSpec.describe Amath::ParseError do
       # the abandoned "1,<digit>" attempt (failing at byte 11) is not part of
       # the rejection; Parslet reports the "," at byte 10.
       it "ignores failures inside branches that later succeeded" do
-        expect { Amath.parse("text(é) 1,", decimal: ",", engine: engine) }
+        expect { Amath::Parser.raw("text(é) 1,", decimal: ",", engine: engine) }
           .to raise_error(described_class) { |e|
             expect([e.byte_offset, e.char_offset]).to eq([10, 9])
             expect(e.message).to include("character 9 (byte 10)")
@@ -51,7 +51,7 @@ RSpec.describe Amath::ParseError do
           it "rejects each oracle row at Parslet's character and byte" do
             expected = rows.to_h { |input, char| [input, [char, input[0, char].bytesize]] }
             actual = rows.keys.to_h do |input|
-              Amath.parse(input, decimal: decimal, engine: engine)
+              Amath::Parser.raw(input, decimal: decimal, engine: engine)
               [input, :accepted]
             rescue described_class => e
               [input, [e.char_offset, e.byte_offset]]

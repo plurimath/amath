@@ -33,6 +33,7 @@ module Amath
     def initialize(path)
       @path = path
       @loaded = nil
+      @bindings = nil
       @lock = Mutex.new
     end
 
@@ -41,12 +42,34 @@ module Amath
       @lock.synchronize do
         @path = path.to_s
         @loaded = nil
+        @bindings = nil
       end
     end
 
     # The Parsanol::PARG::Artifact at #path, loaded on first use.
     def fetch
       @lock.synchronize { @loaded ||= self.class.load(@path) }
+    end
+
+    # The declared Ruby binding artifact beside #path, verified and paired
+    # with the parse artifact, loaded on first use.
+    def bindings
+      parse = fetch
+      @lock.synchronize { @bindings ||= self.class.load_bindings(@path, parse) }
+    end
+
+    def self.bindings_path(path)
+      path.to_s.sub(/\.json\z/, ".bindings.ruby.json")
+    end
+
+    def self.load_bindings(path, parse)
+      file = bindings_path(path)
+      raise ArtifactError, "binding artifact not found: #{file}" unless File.file?(file)
+
+      Parsanol::PARG::Bindings::Artifact.from_json(File.read(file), target: "ruby")
+                                        .pair_with!(parse)
+    rescue Parsanol::PARG::Error, JSON::ParserError, SystemCallError => e
+      raise ArtifactError, "binding artifact #{file} is invalid: #{e.class}: #{e.message}"
     end
   end
 end

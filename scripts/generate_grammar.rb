@@ -1,21 +1,50 @@
 # frozen_string_literal: true
 
-# data/vocabulary.json + grammars/asciimath.parg.template -> grammars/asciimath.parg
+# data/vocabulary.json + grammars/asciimath.parg.template
+#   -> grammars/asciimath.parg                    the grammar Parsanol compiles
+#   -> grammars/asciimath.wrappers.json           the captures the shape
+#                                                 normalization added
+#   -> grammars/asciimath.normalized-rules.json   the normalized rule tree
 #
 # Usage: ruby scripts/generate_grammar.rb [--check]
-#   --check  exit 1 if the committed grammar differs from a fresh generation
+#   --check  exit 1 if a committed output differs from a fresh generation
 #
-# Pure Ruby stdlib; needs neither Plurimath nor Parsanol. Output is a pure
-# function of the two inputs (no timestamps).
+# Needs Parsanol (its PARG parser reads the expanded template), not
+# Plurimath. Output is a pure function of the two inputs (no timestamps).
+#
+# Steps:
+#   1. expand the template with the vocabulary (one rule per line)
+#   2. read every rule with Parsanol's PARG parser into a rule tree
+#      (scripts/parg_rule_tree.rb)
+#   3. normalize capture shapes (shared rules N1-N7 of
+#      scripts/normalize_shapes.rb, amath rules N8-N9 of scripts/amath_shapes.rb),
+#      so that every capture holds one kind; generation stops on a capture
+#      that still holds two kinds or only nil
+#   4. write each rewritten rule back in place of its line, and check that
+#      the written grammar reads back as exactly the normalized rule tree
 
 require "json"
 require "digest"
 require "set"
+require_relative "parg_rule_tree"
+require_relative "amath_shapes"
 
 ROOT = File.expand_path("..", __dir__)
 VOCAB = File.join(ROOT, "data/vocabulary.json")
 TEMPLATE = File.join(ROOT, "grammars/asciimath.parg.template")
 OUT = File.join(ROOT, "grammars/asciimath.parg")
+# Read by the internal raw-tree unwrap (Amath::RawTree) and the model
+# generator (scripts/generate_model.rb).
+WRAPPERS_OUT = File.join(ROOT, "grammars/asciimath.wrappers.json")
+NORMALIZED_OUT = File.join(ROOT, "grammars/asciimath.normalized-rules.json")
+NORMALIZED_FORMAT = "amath-normalized-rules/1"
+# The entry rule of every decimal marker; its `root` capture is the tree.
+ROOT_RULE = "document"
+
+# Captures whose text the legacy transform resolves through the symbol
+# catalog (Utility.asciimath_symbol_object): N9 puts that text under
+# `spelling`, and the model types it as a MathSymbol.
+CATALOG = %w[symbol comma lparen rparen left right table_left table_right d x].freeze
 
 # Decimal marker -> entry name. A marker without a name here stops generation.
 MARKER_ENTRIES = { "." => "dot", "," => "comma", "٫" => "arabic" }.freeze
@@ -233,7 +262,7 @@ class Generator
     names = markers.map { |m| MARKER_ENTRIES.fetch(m) }
     (names.map { |name| "entry #{name}: document__#{name}" } +
       [""] +
-      names.map { |name| "bindings document__#{name} { root -> root (any) }" }).join("\n")
+      names.map { |name| "bindings document__#{name} { root -> expression (any) }" }).join("\n")
   end
 
   TOKEN = /"(?:[^"\\]|\\.)*"|\bas\s+\w+|%x[0-9A-Fa-f.\-]+|\b[A-Za-z_]\w*\b/
@@ -367,19 +396,49 @@ class Generator
   end
 end
 
+# Steps 2-4 over the expanded grammar +text+: [grammar, normalizer].
+def normalize(text)
+  rules = PargRuleTree.read(text)
+  norm = AmathShapes.new(rules, catalog: CATALOG).run
+  clash = norm.collisions
+  abort "normalization leaves wrapper collisions: #{clash.join('; ')}" unless clash.empty?
+
+  rule_re = /\A  ([A-Za-z_]\w*) = (.*)\z/
+  out = text.each_line.map do |line|
+    m = line.chomp.match(rule_re)
+    next line unless m && norm.rules[m[1]] != rules[m[1]]
+
+    "  #{m[1]} = #{PargRuleTree.emit(norm.rules[m[1]])}\n"
+  end.join
+  abort "the normalized grammar does not read back as the normalized rules" unless PargRuleTree.read(out) == norm.rules
+
+  [out, norm]
+end
+
 check = ARGV.delete("--check")
 abort "usage: ruby scripts/generate_grammar.rb [--check]" unless ARGV.empty?
 
-grammar = Generator.new(File.binread(VOCAB), File.read(TEMPLATE, encoding: "UTF-8")).generate
+expanded = Generator.new(File.binread(VOCAB), File.read(TEMPLATE, encoding: "UTF-8")).generate
+grammar, norm = normalize(expanded)
+wrappers = "#{JSON.pretty_generate(
+  'format' => 'amath-wrappers/1',
+  'wrappers' => norm.wrapper_list,
+  'rules' => norm.counts.sort.to_h,
+)}\n"
+normalized = "#{JSON.generate('format' => NORMALIZED_FORMAT, 'root' => ROOT_RULE, 'rules' => norm.rules)}\n"
+outputs = { OUT => grammar, WRAPPERS_OUT => wrappers, NORMALIZED_OUT => normalized }
+relative = ->(path) { path.delete_prefix("#{ROOT}/") }
 if check
-  current = File.exist?(OUT) ? File.read(OUT, encoding: "UTF-8") : nil
-  if current == grammar
-    puts "#{OUT} is up to date"
+  stale = outputs.reject { |path, text| File.exist?(path) && File.read(path, encoding: "UTF-8") == text }.keys
+  if stale.empty?
+    puts "#{outputs.keys.map(&relative).join(', ')} up to date"
   else
-    warn "#{OUT} is stale; run ruby scripts/generate_grammar.rb"
+    warn "stale: #{stale.map(&relative).join(', ')}; run ruby scripts/generate_grammar.rb"
     exit 1
   end
 else
-  File.write(OUT, grammar)
-  puts "wrote #{OUT} sha256:#{Digest::SHA256.hexdigest(grammar)}"
+  outputs.each do |path, text|
+    File.write(path, text)
+    puts "wrote #{relative.(path)} bytes=#{text.bytesize} sha256:#{Digest::SHA256.hexdigest(text)}"
+  end
 end

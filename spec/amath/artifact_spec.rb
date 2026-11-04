@@ -23,7 +23,7 @@ RSpec.describe "Amath artifact loading" do
   def expect_artifact_error(path, pattern)
     Amath.artifact_path = path
     %i[auto ruby].each do |engine|
-      expect { Amath.parse("x", engine: engine) }.to raise_error(Amath::ArtifactError, pattern)
+      expect { Amath::Parser.raw("x", engine: engine) }.to raise_error(Amath::ArtifactError, pattern)
     end
   end
 
@@ -34,7 +34,7 @@ RSpec.describe "Amath artifact loading" do
 
   it "loads the artifact once" do
     expect(Parsanol::PARG::Artifact).to receive(:load).once.and_call_original
-    3.times { Amath.parse("x", engine: :ruby) }
+    3.times { Amath::Parser.raw("x", engine: :ruby) }
   end
 
   it "reloads after artifact_path= changes" do

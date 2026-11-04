@@ -11,7 +11,8 @@ Gem::Specification.new do |spec|
   spec.summary = "AsciiMath parser by Plurimath."
   spec.description = <<~DESCRIPTION
     AsciiMath parser that runs a compiled Parsanol grammar artifact and
-    returns a parse tree. Used by Plurimath.
+    returns a typed AsciiMath model declared with LutaML Model. Used by
+    Plurimath.
   DESCRIPTION
 
   spec.homepage = "https://github.com/plurimath/amath"
@@ -21,11 +22,13 @@ Gem::Specification.new do |spec|
 
   spec.files = Dir.chdir(File.expand_path(__dir__)) do
     Dir["lib/**/*.rb", "artifacts/**/*", "corpora/**/*.yml",
-        "docs/**/*", "README.adoc", "LICENSE.md"]
+        "data/asciimath-symbols.json", "grammars/asciimath.wrappers.json",
+        "model/**/*", "docs/**/*", "README.adoc", "LICENSE.md"]
       .select { |f| File.file?(f) }
   end
   spec.require_paths = ["lib"]
 
+  spec.add_dependency "lutaml-model", "~> 0.8", ">= 0.8.162"
   spec.add_dependency "parsanol", "~> 1.3", ">= 1.3.131"
 
   spec.metadata["rubygems_mfa_required"] = "true"

@@ -3,14 +3,15 @@
 == Purpose
 
 Amath is a parser for https://asciimath.org[AsciiMath], the plain-text
-notation for mathematics. It turns input like this into a parse tree:
+notation for mathematics. It turns input like this into a typed model of the
+formula:
 
 [source]
 ----
 sum_(i=1)^n i^2 = (n(n+1)(2n+1))/6
 ----
 
-The tree records the structure of the formula: which symbols, fractions,
+The model records the structure of the formula: which symbols, fractions,
 roots, sub- and superscripts, matrices and brackets it contains, and how they
 nest. Your code decides what to do with it, such as rendering, converting or
 analysing it.
@@ -24,6 +25,7 @@ checksummed artifact that the gem loads at runtime. The repository will hold:
 * `grammars/`: the grammar source.
 * `artifacts/`: the compiled artifact and its declared binding artifacts.
 * `corpora/`: conformance cases with the input and the tree it must produce.
+* `model/`: the exported LML declarations of the model classes.
 
 == Installation
 
@@ -35,8 +37,9 @@ your `Gemfile`:
 gem "amath", github: "plurimath/amath"
 ----
 
-Amath needs Ruby 3.2 or later. Its only runtime dependency is
-https://github.com/parsanol/parsanol-ruby[Parsanol].
+Amath needs Ruby 3.2 or later. Its runtime dependencies are
+https://github.com/parsanol/parsanol-ruby[Parsanol] and
+https://github.com/lutaml/lutaml-model[LutaML Model].
 
 == Usage
 
@@ -44,13 +47,17 @@ https://github.com/parsanol/parsanol-ruby[Parsanol].
 ----
 require "amath"
 
-tree = Amath.parse("x_y")
-# => {expr: {sequence: {symbol: "x"@0}, expr: {symbol: "_"@1, ...}}}
+doc = Amath.parse("x+1")
+doc.expression.expr.amath_chain.first.amath_step.sequence.symbol.spelling
+# => "x"
 ----
 
-The result is a Parsanol tree: hashes and arrays whose leaves are
-`Parsanol::Slice` objects. Each leaf knows its text and where it starts in
-the input. Empty input gives back an empty string.
+The result is an `Amath::Model::Document`, built with LutaML Model. Its
+`expression` holds the formula; a run of terms such as `x + 1` is one flat
+list of items, however long it is. Symbols such as `alpha` or `->` are
+`Amath::Model::MathSymbol` objects that carry the text as written, its
+Unicode value and its kind. Numbers keep the text you wrote. Empty input
+gives a document whose `expression` is nil.
 
 Numbers use a dot as the decimal marker unless you say otherwise. A comma and
 the Arabic decimal separator are also supported:
@@ -86,7 +93,7 @@ Long sums and sequences (thousands of terms) are not nesting: both engines
 parse them without going deeper as the expression gets longer.
 `Amath.last_engine` tells you which engine handled the last call.
 
-The exact rules for trees, positions, engines and errors are in
+The exact rules for the model, positions, engines and errors are in
 link:docs/parser-contract.adoc[the parser contract].
 
 == Status
@@ -99,7 +106,7 @@ It also reads the measurement-uncertainty forms `ustd(...)`, `uexp(...)` and
 (https://github.com/plurimath/plurimath/issues/493[plurimath/plurimath#493]).
 Shared exponents can be written as `ustd((3.85, 0.23)e4)` or
 `ustd(680(41)e-3)`; see the link:docs/parser-contract.adoc[parser contract]
-for the parse-tree fields and the corresponding expanded/interval call forms.
+for the model fields and the corresponding expanded/interval call forms.
 
 It has not been released to RubyGems yet.
 

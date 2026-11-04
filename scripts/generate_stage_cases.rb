@@ -5,7 +5,8 @@
 # (stages/asciimath/generations/<NNNNNN>/payloads/<group>.yaml, schema
 # plurimath-stage/asciimath/cases/1).
 #
-# Every case is parsed by Amath.parse on each selected engine. The raw tree is
+# Every case is parsed by Amath::Parser.raw (the internal raw-tree
+# boundary) on each selected engine. The raw tree is
 # written in the canonical tagged form of the testsuite's
 # docs/tree-parity-contract.adoc. The script stops without writing anything
 # when the engines disagree, or when a tree's uncertainty node does not carry
@@ -85,8 +86,10 @@ module StageCases
     end
   end
 
+  # The internal raw tree (Amath::Parser.raw, the legacy-shaped tree the
+  # normalized grammar's tree unwraps to); Amath.parse returns the model.
   def parse(input, engine)
-    tree = Amath.parse(input, decimal: DECIMAL, engine: engine)
+    tree = Amath::Parser.raw(input, decimal: DECIMAL, engine: engine)
     return tree if Amath.last_engine == engine
 
     raise "#{input.inspect}: ran on #{Amath.last_engine}, not #{engine}"
@@ -187,7 +190,7 @@ module StageCases
       "semantic_boundary" => "raw-tree",
       "configuration" => { "decimal" => DECIMAL,
                            "engines" => engines.map(&:to_s),
-                           "entry_point" => "Amath.parse" } }
+                           "entry_point" => "Amath::Parser.raw" } }
   end
 
   def options(argv)
