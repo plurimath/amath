@@ -3,13 +3,17 @@
 # Build-time export of every piece of Ruby data that Plurimath's AsciiMath
 # Parslet grammar (lib/plurimath/asciimath/parse.rb) turns into grammar
 # alternatives. amath never loads Plurimath at runtime; this script runs once
-# against a pinned Plurimath checkout and writes data/vocabulary.json, which
-# scripts/generate_grammar.rb turns into grammars/asciimath.parg.
+# against a pinned Plurimath checkout and writes the dialect L vocabulary in
+# the v1 layout (amath-vocabulary/v1). The registry (data/vocabulary.json,
+# amath-vocabulary/v2) takes it in as its next pinned legacy edition with
+# scripts/registry.rb --import-legacy, which keeps the pma entries; then
+# scripts/generate_grammar.rb turns it into grammars/asciimath.parg.
 #
 # Usage (from the Plurimath checkout, so its bundle is active):
 #
 #   cd PLURIMATH && bundle exec ruby -Ilib AMATH/scripts/export_vocabulary.rb \
-#     [--out AMATH/data/vocabulary.json]
+#     [--out AMATH/tmp/vocabulary-v1.json]
+#   cd AMATH && ruby scripts/registry.rb --import-legacy tmp/vocabulary-v1.json
 #
 # The output is deterministic: same checkout + same Ruby => same bytes. It
 # carries no timestamps. Arrays keep the oracle's effective alternative order;
@@ -19,7 +23,7 @@ require "json"
 require "digest"
 require "plurimath"
 
-out = File.expand_path("../data/vocabulary.json", __dir__)
+out = File.expand_path("../tmp/vocabulary-v1.json", __dir__)
 args = ARGV.dup
 until args.empty?
   case (arg = args.shift)
@@ -120,5 +124,6 @@ data = {
 }
 
 json = "#{JSON.pretty_generate(data)}\n"
+Dir.mkdir(File.dirname(out)) unless Dir.exist?(File.dirname(out))
 File.binwrite(out, json)
 warn "wrote #{out} (#{vocabulary.size} vocabulary entries, sha256:#{Digest::SHA256.hexdigest(json)})"

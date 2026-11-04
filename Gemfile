@@ -11,6 +11,8 @@ gem "parsanol", ENV.fetch("PARSANOL_VERSION") if ENV["PARSANOL_VERSION"]
 
 gem "rake", "~> 13.0"
 gem "rspec", "~> 3.0"
+# unitsdb unit symbols and names for scripts/check_reserved_words.rb.
+gem "unitsdb", "~> 2.2"
 
 group :development do
   gem "rubocop"

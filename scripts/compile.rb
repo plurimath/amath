@@ -25,6 +25,7 @@ require "digest"
 require "json"
 require "open3"
 require "tmpdir"
+require_relative "registry"
 
 ROOT = File.expand_path("..", __dir__)
 GRAMMAR = File.join(ROOT, "grammars/asciimath.parg")
@@ -116,7 +117,8 @@ BINDING_TARGETS.each do |target|
 end
 lines += [
   "grammars/asciimath.parg sha256:#{Digest::SHA256.file(GRAMMAR).hexdigest}",
-  "data/vocabulary.json sha256:#{Digest::SHA256.file(VOCAB).hexdigest}",
+  "data/vocabulary.json #{Registry::FORMAT} sha256:#{Digest::SHA256.file(VOCAB).hexdigest}",
+  "registry legacy_edition #{Registry.load(VOCAB)['legacy_edition'].values_at('edition', 'sha256').join(' ')}",
   "entries #{envelope.fetch('entries').keys.join(' ')}",
   "order_warnings #{envelope.dig('lint', 'order_warnings').size}",
 ]
