@@ -1,21 +1,35 @@
 # frozen_string_literal: true
 
 # Turns amath's conformance corpora (corpora/*.yml, schema_version 1) into
-# raw-tree stage payloads for plurimath-testsuite
+# stage payloads for plurimath-testsuite
 # (stages/asciimath/generations/<NNNNNN>/payloads/<group>.yaml, schema
-# plurimath-stage/asciimath/cases/1).
+# plurimath-stage/asciimath/cases/1), at one of two boundaries:
 #
-# Every case is parsed by Amath::Parser.raw (the internal raw-tree
-# boundary) on each selected engine. The raw tree is
-# written in the canonical tagged form of the testsuite's
+# raw-tree (the default): every case is parsed by Amath::Parser.raw (the
+# internal raw-tree boundary) on each selected engine, and the raw tree is
+# written to <group>.yaml.
+#
+# typed-model: every case is parsed by Amath.parse on each selected engine,
+# and the typed model (Amath::Model::Document) is written to
+# model-<group>.yaml with row ids "<id>.model". The rows are written from
+# the bound data the model is built from (the artifact's `(any)` binding
+# output), typed by the declared model attributes: each object is
+# {node: <model class>, fields: [...]} with its set fields in declaration
+# order (nil fields are left out) and derived fields (MathSymbol value and
+# kind) as the model computes them. The same walk over the built model must
+# give the same rows, so the rows are the model.
+#
+# Values are written in the canonical tagged form of the testsuite's
 # docs/tree-parity-contract.adoc. The script stops without writing anything
-# when the engines disagree, or when a tree's uncertainty node does not carry
-# the source texts the corpus entry records.
+# when the engines disagree, when a tree's uncertainty node does not carry
+# the source texts the corpus entry records, or (typed-model) when the
+# bound data and the built model differ.
 #
 # Usage:
 #
 #   bundle exec ruby scripts/generate_stage_cases.rb --out DIR \
-#     [--engines native,ruby] [--producer FILE] [CORPUS.yml ...]
+#     [--boundary raw-tree|typed-model] [--engines native,ruby] \
+#     [--producer FILE] [CORPUS.yml ...]
 #
 # With no corpus files it reads every corpora/*.yml. --producer writes the
 # producer block for the generation's provenance.yaml (repository, commit,
@@ -24,6 +38,7 @@
 
 require "digest"
 require "fileutils"
+require "json"
 require "open3"
 require "yaml"
 require_relative "../lib/amath"
@@ -36,6 +51,8 @@ module StageCases
   DECIMAL = "."
   ENGINES = %i[native ruby].freeze
   HEADER = "# Written by amath scripts/generate_stage_cases.rb. Do not edit.\n"
+  BOUNDARIES = %w[raw-tree typed-model].freeze
+  LML = "model/asciimath.lml.json"
 
   module_function
 
@@ -110,11 +127,94 @@ module StageCases
     { "preprocessed" => string(input), "tree" => dumps.first }
   end
 
-  def payload(path, engines)
+  # Tagged typed-model node of +klass+ from its bound data +data+ (a Hash
+  # of attribute name => plain data).
+  def model_node(klass, data, path)
+    raise "#{path}: #{klass} data is a #{data.class}, not a Hash" unless data.is_a?(Hash)
+
+    attributes = klass.attributes
+    unknown = data.keys.map(&:to_s) - attributes.keys.map(&:to_s)
+    raise "#{path}: #{klass} has no attribute #{unknown.join(', ')}" unless unknown.empty?
+
+    instance = nil
+    fields = attributes.filter_map do |name, attribute|
+      value = if attribute.derived?
+                (instance ||= klass.new(data)).public_send(name)
+              else
+                data.fetch(name.to_s) { data[name] }
+              end
+      next if value.nil?
+
+      [name.to_s, model_field(attribute, value, "#{path}/#{name}")]
+    end
+    { "node" => klass.name, "fields" => fields }
+  end
+
+  def model_field(attribute, value, path)
+    return model_value(attribute.type, value, path) unless attribute.collection?
+    raise "#{path}: a collection holds a #{value.class}" unless value.is_a?(Array)
+
+    { "array" => value.each_with_index.map { |item, i| model_value(attribute.type, item, "#{path}/#{i}") } }
+  end
+
+  def model_value(type, value, path)
+    if type.is_a?(Class) && type < Lutaml::Model::Serializable
+      model_node(type, value, path)
+    elsif type == Lutaml::Model::Type::String && value.is_a?(String)
+      string(value)
+    else
+      raise "#{path}: #{value.class} for a #{type} attribute"
+    end
+  end
+
+  # The same tagged form read from a built model, through its declared
+  # attributes (never lutaml-model serialization).
+  def model_walk(value)
+    case value
+    when Lutaml::Model::Serializable
+      fields = value.class.attributes.filter_map do |name, _attribute|
+        child = value.public_send(name)
+        [name.to_s, model_walk(child)] unless child.nil?
+      end
+      { "node" => value.class.name, "fields" => fields }
+    when Array then { "array" => value.map { |item| model_walk(item) } }
+    when String then string(value)
+    else raise ArgumentError, "unexpected #{value.class} in the model"
+    end
+  end
+
+  # [tagged Document from the bound data, the built Document] of +input+.
+  def model(input, engine)
+    entry, text, tree = Amath::Parser.run(input, decimal: DECIMAL, engine: engine)
+    raise "#{input.inspect}: ran on #{Amath.last_engine}, not #{engine}" unless Amath.last_engine == engine
+
+    data = { "decimal" => DECIMAL }
+    data["expression"] = Amath.bindings.apply(entry, tree).fetch(:expression) unless text.empty?
+    document = Amath.parse(input, decimal: DECIMAL, engine: engine)
+    [model_node(Amath::Model::Document, data, "/"), document]
+  end
+
+  def expected_model(entry, engines)
+    id = entry.fetch("id")
+    input = entry.fetch("input")
+    expected(entry, engines)
+    results = engines.map { |engine| model(input, engine) }
+    dumps = results.map(&:first)
+    raise "#{id}: the engines return different models" if dumps.uniq.size > 1
+
+    results.each do |dump, document|
+      raise "#{id}: the built model differs from its bound data" unless model_walk(document) == dump
+    end
+    { "preprocessed" => string(input), "tree" => dumps.first }
+  end
+
+  def payload(path, engines, boundary = "raw-tree")
     corpus = YAML.safe_load_file(path)
     unless corpus["schema_version"] == 1
       raise "#{path}: schema_version is not 1"
     end
+
+    return model_payload(corpus, File.basename(path, ".yml"), engines) if boundary == "typed-model"
 
     group = File.basename(path, ".yml")
     cases = corpus.fetch("cases").map do |entry|
@@ -128,6 +228,22 @@ module StageCases
                        "(#{corpus.fetch('issue')}). Amath.parse has no " \
                        "preprocessing, so preprocessed is the input.",
       "boundary" => "raw-tree", "cases" => cases }
+  end
+
+  def model_payload(corpus, source, engines)
+    cases = corpus.fetch("cases").map do |entry|
+      { "id" => "#{source}.#{entry.fetch('id')}.model",
+        "input" => string(entry.fetch("input")),
+        "options" => { "decimal" => DECIMAL },
+        "expected" => expected_model(entry, engines) }
+    end
+    { "schema" => SCHEMA, "group" => "model-#{source}",
+      "description" => "amath typed models (Amath.parse) for corpora/#{source}.yml " \
+                       "(#{corpus.fetch('issue')}). Each object is its model class " \
+                       "(#{LML}) with its set fields in declaration order; nil " \
+                       "fields are left out. Amath.parse has no preprocessing, so " \
+                       "preprocessed is the input.",
+      "boundary" => "typed-model", "cases" => cases }
   end
 
   def git(*command)
@@ -156,12 +272,24 @@ module StageCases
       "resolved" => specs.to_h { |spec| [spec.name, spec.version.to_s] } }
   end
 
-  def environment(commit)
+  # The committed LML export of the model classes the typed-model rows name.
+  def lml(commit)
+    export = JSON.parse(File.read(File.join(ROOT, LML)))
+    { "format" => export.fetch("format"),
+      "checksum" => "sha256:#{Digest::SHA256.file(File.join(ROOT, LML)).hexdigest}",
+      "models" => export.fetch("models").size,
+      "export" => tracked(LML, commit) }
+  end
+
+  def environment(commit, boundary = "raw-tree")
     sums = checksums
+    model = boundary == "typed-model"
+    dependencies = { "parsanol" => Parsanol::VERSION }
+    dependencies["lutaml-model"] = Lutaml::Model::VERSION if model
     { "ruby" => { "engine" => RUBY_ENGINE, "version" => RUBY_VERSION },
       "xml_engine" => nil,
       "lockfile" => lockfile,
-      "dependencies" => { "parsanol" => Parsanol::VERSION },
+      "dependencies" => dependencies,
       "compiler" => {
         "name" => "parsanol", "version" => sums.fetch("compiler_version"),
         "source_hash" => sums.fetch("source_hash"),
@@ -172,35 +300,38 @@ module StageCases
         "ruby_checksum" => sums.fetch("bindings_ruby_checksum").split.first,
         "artifact" => tracked("artifacts/asciimath.bindings.ruby.json", commit),
       },
-      "lml" => nil }
+      "lml" => (lml(commit) if model) }
   end
 
-  def producer(corpora, engines)
+  def producer(corpora, engines, boundary = "raw-tree")
     clean = git("status", "--porcelain").empty?
     raise "--producer needs a clean checkout" unless clean
 
+    model = boundary == "typed-model"
     commit = git("rev-parse", "HEAD").strip
     inputs = corpora.map { |path| path.delete_prefix("#{ROOT}/") } +
       ["artifacts/asciimath.json"]
+    inputs << LML if model
     { "kind" => "stage-gem", "repository" => REPOSITORY, "commit" => commit,
       "version" => Amath::VERSION,
       "generator" => tracked("scripts/generate_stage_cases.rb", commit),
       "inputs" => inputs.map { |relative| tracked(relative, commit) },
-      "environment" => environment(commit),
-      "semantic_boundary" => "raw-tree",
+      "environment" => environment(commit, boundary),
+      "semantic_boundary" => boundary,
       "configuration" => { "decimal" => DECIMAL,
                            "engines" => engines.map(&:to_s),
-                           "entry_point" => "Amath::Parser.raw" } }
+                           "entry_point" => model ? "Amath.parse" : "Amath::Parser.raw" } }
   end
 
   def options(argv)
-    opts = { engines: ENGINES, corpora: [] }
+    opts = { engines: ENGINES, corpora: [], boundary: "raw-tree" }
     args = argv.dup
     until args.empty?
       case (arg = args.shift)
       when "--out" then opts[:out] = File.expand_path(args.shift)
       when "--producer" then opts[:producer] = File.expand_path(args.shift)
       when "--engines" then opts[:engines] = args.shift.split(",").map(&:to_sym)
+      when "--boundary" then opts[:boundary] = args.shift
       when /\A--/ then abort "unknown option #{arg.inspect}"
       else opts[:corpora] << File.expand_path(arg)
       end
@@ -210,8 +341,11 @@ module StageCases
 
   def check(opts)
     unless opts[:out]
-      abort "usage: #{$PROGRAM_NAME} --out DIR [--engines native,ruby] " \
-            "[--producer FILE] [CORPUS.yml ...]"
+      abort "usage: #{$PROGRAM_NAME} --out DIR [--boundary raw-tree|typed-model] " \
+            "[--engines native,ruby] [--producer FILE] [CORPUS.yml ...]"
+    end
+    unless BOUNDARIES.include?(opts[:boundary])
+      abort "unknown boundary #{opts[:boundary].inspect} (#{BOUNDARIES.join(', ')})"
     end
     abort "no corpus files" if opts[:corpora].empty?
     opts[:engines].each do |engine|
@@ -228,8 +362,8 @@ module StageCases
     opts[:corpora] = Dir[glob] if opts[:corpora].empty?
     opts[:corpora] = opts[:corpora].sort
     check(opts)
-    payloads = opts[:corpora].map { |path| payload(path, opts[:engines]) }
-    block = (producer(opts[:corpora], opts[:engines]) if opts[:producer])
+    payloads = opts[:corpora].map { |path| payload(path, opts[:engines], opts[:boundary]) }
+    block = (producer(opts[:corpora], opts[:engines], opts[:boundary]) if opts[:producer])
     FileUtils.mkdir_p(opts[:out])
     payloads.each do |data|
       File.write(File.join(opts[:out], "#{data['group']}.yaml"),

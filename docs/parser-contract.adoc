@@ -138,8 +138,13 @@ The input/tree and consuming-reader decimal expectations are recorded in
 `scripts/generate_stage_cases.rb` turns each corpus file into a raw-tree
 payload for the `asciimath` stage generations in plurimath-testsuite, after
 checking that both engines return the same tree and that it carries the
-corpus texts. Its `--producer` option writes the provenance block for that
-generation.
+corpus texts. With `--boundary typed-model` it writes `model-<group>`
+payloads instead: the `Amath.parse` Document of each case, written from the
+bound data the model is built from and typed by the declared model classes
+(`model/asciimath.lml.json`), after checking that both engines agree and that
+the built model gives the same rows. Its `--producer` option writes the
+provenance block for that generation, including the LML export checksum for
+typed-model rows.
 
 [[decimal]]
 == Decimal markers
