@@ -108,6 +108,15 @@ Shared exponents can be written as `ustd((3.85, 0.23)e4)` or
 `ustd(680(41)e-3)`; see the link:docs/parser-contract.adoc[parser contract]
 for the model fields and the corresponding expanded/interval call forms.
 
+`Amath.parse(input, dialect: :pma)` reads pma (dialect P, the strict ASCII
+dialect of
+https://github.com/plurimath/amath/issues/16[plurimath/amath#16], specified
+in Plurimath's `docs/pma.adoc`): measured literals such as
+`(10.3 +/- 0.2 ~rect) unit(cm)`, the `ustd`, `uexp` and `ucov` constructors,
+`unit(...)` and `diff(...)`. It refuses everything else with an
+`Amath::ParseError` that names a category. See the
+link:docs/parser-contract.adoc#pma[parser contract].
+
 It has not been released to RubyGems yet.
 
 == License

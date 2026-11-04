@@ -28,6 +28,11 @@
     "diff",
     "quantity"
   ],
+  "units": {
+    "artifact": "asciiunits",
+    "version": "0.1.6",
+    "checksum": "sha256:aa22618c80dc02f3fe1edf2c798dbe34aceae5f4d84524ff98f76a2b91af151d"
+  },
   "bindings": {
     "symbol": {
       "symbol": "Amath::Model::MathSymbol"

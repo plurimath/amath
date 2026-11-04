@@ -1,0 +1,105 @@
+schema_version: 1
+dialect: pma
+spec: plurimath docs/pma.adoc
+contract: >-
+  Every accepted example of the specification. `term` is the typed model's
+  bound data (the term of Amath.parse(input, dialect: :pma)) with the source
+  texts as written; a measured value is an Uncertainty, its unit inside it.
+cases:
+- id: ctor.ustd
+  input: ustd(1.230, 0.004)
+  term: {uncertainty: {uncertainty_class: ustd, value: '1.230', magnitude: '0.004'}}
+- id: ctor.ustd.negative
+  input: ustd(-1.230, 0.004)
+  term: {uncertainty: {uncertainty_class: ustd, value: '-1.230', magnitude: '0.004'}}
+- id: ctor.uexp
+  input: uexp(10.0, 0.3, 2)
+  term: {uncertainty: {uncertainty_class: uexp, value: '10.0', magnitude: '0.3', coverage_factor: '2'}}
+- id: ctor.uexp.probability
+  input: uexp(10.0, 0.3, 2, 0.95)
+  term: {uncertainty: {uncertainty_class: uexp, value: '10.0', magnitude: '0.3', coverage_factor: '2', coverage_probability: '0.95'}}
+- id: ctor.uexp.zero_k
+  note: the grammar accepts it; Plurimath refuses k = 0 when it builds the node
+  input: uexp(1.0, 0.3, 0, 0.95)
+  term: {uncertainty: {uncertainty_class: uexp, value: '1.0', magnitude: '0.3', coverage_factor: '0', coverage_probability: '0.95'}}
+- id: ctor.ucov
+  input: ucov(1.024, 0.983, 1.088, 0.95)
+  term: {uncertainty: {uncertainty_class: ucov, value: '1.024', lower: '0.983', upper: '1.088', coverage_probability: '0.95'}}
+- id: ctor.ucov.shortest
+  input: ucov(1.024, 0.983, 1.088, 0.95, shortest)
+  term: {uncertainty: {uncertainty_class: ucov, value: '1.024', lower: '0.983', upper: '1.088', coverage_probability: '0.95', interval_kind: shortest}}
+- id: ctor.ucov.symmetric
+  input: ucov(1.024, 0.983, 1.088, 0.95, symmetric)
+  term: {uncertainty: {uncertainty_class: ucov, value: '1.024', lower: '0.983', upper: '1.088', coverage_probability: '0.95', interval_kind: symmetric}}
+- id: unit.quotient
+  input: unit(m/s^2)
+  term: {unit: {literal: m/s^2}}
+- id: unit.product
+  input: unit(kg*m^2)
+  term: {unit: {literal: kg*m^2}}
+- id: unit.nested_depth_8
+  input: unit((((((((m))))))))
+  term: {unit: {literal: (((((((m)))))))}}
+- id: diff.kelvin
+  input: diff((5.0 +/- 0.1) unit(K))
+  term: {diff: {uncertainty: {value: '5.0', plus_minus: +/-, magnitude: '0.1', unit: {literal: K}}}}
+- id: diff.celsius
+  input: diff((20.0 +/- 0.2) unit(degC))
+  term: {diff: {uncertainty: {value: '20.0', plus_minus: +/-, magnitude: '0.2', unit: {literal: degC}}}}
+- id: measured.standard
+  input: (10.3 +/- 0.2)
+  term: {uncertainty: {value: '10.3', plus_minus: +/-, magnitude: '0.2'}}
+- id: measured.negative
+  input: (-1.230 +/- 0.004)
+  term: {uncertainty: {value: '-1.230', plus_minus: +/-, magnitude: '0.004'}}
+- id: measured.spaced
+  input: '( 10.3 +/- 0.2 )'
+  term: {uncertainty: {value: '10.3', plus_minus: +/-, magnitude: '0.2'}}
+- id: exponent.plain
+  input: (3.85 +/- 0.23)e4
+  term: {uncertainty: {value: '3.85', plus_minus: +/-, magnitude: '0.23', shared_exponent: '4'}}
+- id: exponent.plus
+  input: (3.85 +/- 0.23)e+4
+  term: {uncertainty: {value: '3.85', plus_minus: +/-, magnitude: '0.23', shared_exponent: '+4'}}
+- id: exponent.minus
+  input: (1.024 +/- 0.003)e-3
+  term: {uncertainty: {value: '1.024', plus_minus: +/-, magnitude: '0.003', shared_exponent: '-3'}}
+- id: relative.integer
+  input: (10.3 +/- 2%)
+  term: {uncertainty: {value: '10.3', plus_minus: +/-, relative_magnitude: '2'}}
+- id: relative.decimal
+  input: (10.3 +/- 0.5%)
+  term: {uncertainty: {value: '10.3', plus_minus: +/-, relative_magnitude: '0.5'}}
+- id: tag.rect
+  input: (10.3 +/- 0.2 ~rect)
+  term: {uncertainty: {value: '10.3', plus_minus: +/-, magnitude: '0.2', distribution: rect}}
+- id: tag.triang.unit
+  input: (10.3 +/- 0.2 ~triang) unit(cm)
+  term: {uncertainty: {value: '10.3', plus_minus: +/-, magnitude: '0.2', distribution: triang, unit: {literal: cm}}}
+- id: tag.arcsine.exponent
+  input: (3.85 +/- 0.23 ~arcsine)e4
+  term: {uncertainty: {value: '3.85', plus_minus: +/-, magnitude: '0.23', distribution: arcsine, shared_exponent: '4'}}
+- id: tag.relative
+  input: (10.3 +/- 2% ~rect)
+  term: {uncertainty: {value: '10.3', plus_minus: +/-, relative_magnitude: '2', distribution: rect}}
+- id: tag.unspaced
+  input: (10.3 +/- 0.2~rect)
+  term: {uncertainty: {value: '10.3', plus_minus: +/-, magnitude: '0.2', distribution: rect}}
+- id: attach.measured
+  input: (10.3 +/- 0.2) unit(cm)
+  term: {uncertainty: {value: '10.3', plus_minus: +/-, magnitude: '0.2', unit: {literal: cm}}}
+- id: attach.unspaced
+  input: (10.3+/-0.2)unit(cm)
+  term: {uncertainty: {value: '10.3', plus_minus: +/-, magnitude: '0.2', unit: {literal: cm}}}
+- id: attach.exponent
+  input: (3.85 +/- 0.23)e4 unit(m)
+  term: {uncertainty: {value: '3.85', plus_minus: +/-, magnitude: '0.23', shared_exponent: '4', unit: {literal: m}}}
+- id: attach.relative
+  input: (10.3 +/- 2%) unit(cm)
+  term: {uncertainty: {value: '10.3', plus_minus: +/-, relative_magnitude: '2', unit: {literal: cm}}}
+- id: attach.ustd
+  input: ustd(1.230, 0.004) unit(g)
+  term: {uncertainty: {uncertainty_class: ustd, value: '1.230', magnitude: '0.004', unit: {literal: g}}}
+- id: attach.uexp
+  input: uexp(100.02147, 0.00079, 2) unit(g)
+  term: {uncertainty: {uncertainty_class: uexp, value: '100.02147', magnitude: '0.00079', coverage_factor: '2', unit: {literal: g}}}

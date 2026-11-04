@@ -1,0 +1,10 @@
+{
+  "format": "amath-wrappers/1",
+  "wrappers": {
+    "empty_list": "empty_list",
+    "literal": "text"
+  },
+  "rules": {
+    "N8 empty run": 1
+  }
+}

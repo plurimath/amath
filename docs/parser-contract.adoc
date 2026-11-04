@@ -25,6 +25,7 @@ reads Plurimath constants.
 [source,ruby]
 ----
 Amath.parse(input, decimal: ".", engine: :auto) # => Amath::Model::Document
+Amath.parse(input, dialect: :pma)               # => Amath::Model::PmaDocument
 Amath.last_engine                                # => :native, :ruby or nil
 Amath.native_available?                          # => true / false
 Amath.artifact_path                              # => String
@@ -40,6 +41,10 @@ position refers to that string.
 `decimal`:: the decimal marker for numbers. See <<decimal>>.
 
 `engine`:: `:auto`, `:native` or `:ruby`. See <<engine>>.
+
+`dialect`:: `:legacy` (the default), dialect L, the AsciiMath this page
+describes; or `:pma`, dialect P (<<pma>>). Any other value raises
+`ArgumentError` before an artifact is loaded.
 
 There is no second public parse method. The raw parse tree is internal
 (<<raw-tree>>).
@@ -255,7 +260,9 @@ never lets `SystemStackError` escape from `Amath.parse`.
 All deliberate errors inherit from `Amath::Error < StandardError`.
 
 `Amath::ParseError`::
-The input is not valid AsciiMath for the selected decimal marker. Full
+The input is not valid AsciiMath for the selected decimal marker (or, under
+`dialect: :pma`, not valid pma; then `category` names the rule it breaks,
+see <<pma>>; it is nil for dialect L). Full
 consumption is required: a valid prefix followed by invalid text is a
 rejection, never a partial tree. Attributes:
 +
@@ -321,6 +328,56 @@ on first use, and cached for the process. Assigning `Amath.artifact_path=`
 clears the cache; it exists for tests and tooling, not for selecting
 alternative grammars in production.
 
+[[pma]]
+== pma (dialect P)
+
+`Amath.parse(input, dialect: :pma)` reads pma, the strict ASCII dialect
+specified in plurimath `docs/pma.adoc` (amath#16). It parses with its own
+artifact, `artifacts/pma.json` (grammar `grammars/pma.parg`, generated from
+`grammars/pma.parg.template` and the registry's pma entries), and never with
+the dialect L artifact; a refused input is never retried in the other
+dialect. A missing or failing pma artifact raises `Amath::ArtifactError`.
+
+Version 1 reads one term:
+
+* a measured value: a measured literal `(v +/- u)`, with an optional shared
+  exponent `(v +/- u)e4`, a relative uncertainty `(v +/- p%)` and an optional
+  distribution tag inside the bracket, `(v +/- u ~rect)`; or a constructor
+  `ustd(v, u)`, `uexp(v, U, k[, p])`, `ucov(v, lo, hi, p[, kind])`;
+* a measured value followed by `unit(...)`;
+* `unit(...)` on its own;
+* `diff(...)` of a measured value with its unit.
+
+The content of `unit(...)` is unquoted and parsed by the asciiunits artifact
+(gem `asciiunits`). The pma artifact's checksum record names the asciiunits
+artifact the grammar was composed with, and amath refuses to run pma with
+another one (`Amath::ArtifactError`).
+
+The result is an `Amath::Model::PmaDocument` whose `term` holds
+`uncertainty`, `unit` or `diff`. A measured value is the same
+`Amath::Model::Uncertainty` class dialect L builds, with its unit in `unit`
+(an `Amath::Model::Unit` whose `literal` is the unit text). pma adds three
+fields that stay nil for dialect L: `plus_minus` (`+/-` for a measured
+literal, which is a standard uncertainty), `relative_magnitude` (the `p` of
+`p%`) and `distribution` (`rect`, `triang` or `arcsine`). Numbers keep their
+source text. `decimal:` has no meaning in pma version 1; any value other than
+`"."` raises `ArgumentError`.
+
+Every form the specification leaves open is refused. Each refusal is an
+`Amath::ParseError` with `byte_offset`, `char_offset` and a `category`: one
+of `reserved-word`, `adjacency`, `constructor-arity`,
+`constructor-argument`, `measured-literal`, `plus-minus-spelling`,
+`shared-exponent`, `relative`, `distribution-tag`, `concise`,
+`unit-expression`, `unit-attachment`, `quantity-assertion` (the specification's
+taxonomy) or `no-production` (text that starts no production). The position
+is the parser's; for a unit the asciiunits grammar refuses, it is the
+position inside the unit text. `corpora/pma/*.yml` holds every accepted and
+refused example of the specification, with the categories and positions,
+and is staging until the pma corpus has its place in a testsuite.
+
+The pma grammar has no recursion: brackets inside `unit(...)` nest at most
+eight deep, so deep input is a `ParseError`, never `NestingTooDeep`.
+
 [[registry]]
 == The registry
 
@@ -339,6 +396,14 @@ vocabulary comes from `scripts/export_vocabulary.rb` and enters the registry
 with `ruby scripts/registry.rb --import-legacy FILE`, which pins it as the
 next edition and keeps the pma entries. `ruby scripts/registry.rb --check`
 verifies the file and the pin.
+
+The pma grammar is generated from the entries tagged `pma` or `both` (in
+version 1, the distribution names), checked with the same shape
+normalization and strict checks as dialect L, and its header records the
+registry edition and the asciiunits artifact (`units` in the registry). The
+model is generated from both grammars (`scripts/generate_model.rb`): a
+capture name is one class with the keys of both, and every binding's model
+type is checked against the generated model.
 
 The registry also lists the pma reserved words (`unit`, `ustd`, `uexp`,
 `ucov`, `diff`, `quantity`). They are grammar terminals, not entries.

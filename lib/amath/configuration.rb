@@ -13,6 +13,11 @@ module Amath
 
     ENGINES = %i[auto native ruby].freeze
 
+    # Amath.parse dialect: option values. :legacy is dialect L (asciimath.org
+    # AsciiMath as Plurimath reads it), :pma is dialect P (plurimath
+    # docs/pma.adoc).
+    DIALECTS = %i[legacy pma].freeze
+
     # Deepest bracket nesting sent to the native engine off the main thread.
     THREAD_NATIVE_DEPTH = 25
     OPENING = "([{\u2112\u1455".chars.freeze

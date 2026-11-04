@@ -515,6 +515,17 @@
     },
     {
       "lml": 1,
+      "model": "Amath::Model::Diff",
+      "attributes": [
+        {
+          "name": "uncertainty",
+          "type": "Amath::Model::Uncertainty"
+        }
+      ],
+      "mappings": {}
+    },
+    {
+      "lml": 1,
       "model": "Amath::Model::Dividend",
       "attributes": [
         {
@@ -1493,6 +1504,17 @@
     },
     {
       "lml": 1,
+      "model": "Amath::Model::PmaDocument",
+      "attributes": [
+        {
+          "name": "term",
+          "type": "Amath::Model::Term"
+        }
+      ],
+      "mappings": {}
+    },
+    {
+      "lml": 1,
       "model": "Amath::Model::Power",
       "attributes": [
         {
@@ -1907,6 +1929,25 @@
     },
     {
       "lml": 1,
+      "model": "Amath::Model::Term",
+      "attributes": [
+        {
+          "name": "diff",
+          "type": "Amath::Model::Diff"
+        },
+        {
+          "name": "uncertainty",
+          "type": "Amath::Model::Uncertainty"
+        },
+        {
+          "name": "unit",
+          "type": "Amath::Model::Unit"
+        }
+      ],
+      "mappings": {}
+    },
+    {
+      "lml": 1,
       "model": "Amath::Model::Ternary",
       "attributes": [
         {
@@ -2149,6 +2190,10 @@
           "type": "string"
         },
         {
+          "name": "distribution",
+          "type": "string"
+        },
+        {
           "name": "interval_kind",
           "type": "string"
         },
@@ -2158,6 +2203,14 @@
         },
         {
           "name": "magnitude",
+          "type": "string"
+        },
+        {
+          "name": "plus_minus",
+          "type": "string"
+        },
+        {
+          "name": "relative_magnitude",
           "type": "string"
         },
         {

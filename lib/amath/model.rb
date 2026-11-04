@@ -44,6 +44,13 @@ module Amath
       attribute :decimal, :string
     end
 
+    # The result of one pma parse (Amath.parse(input, dialect: :pma)): the
+    # one term pma version 1 reads. Its measured values are the same
+    # Uncertainty (and Unit) classes dialect L builds.
+    class PmaDocument < Lutaml::Model::Serializable
+      attribute :term, "Amath::Model::Term"
+    end
+
     # Every model class, in name order.
     def self.classes
       constants.sort.map { |c| const_get(c) }

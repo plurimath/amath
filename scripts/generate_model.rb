@@ -1,10 +1,17 @@
 # frozen_string_literal: true
 
 # Writes lib/amath/model/nodes.rb, the plain LML classes of the AsciiMath
-# model, from the static capture shapes of the normalized grammar
-# (grammars/asciimath.normalized-rules.json, written by
+# model, from the static capture shapes of the normalized grammars of both
+# dialects (grammars/asciimath.normalized-rules.json and
+# grammars/pma.normalized-rules.json, written by
 # scripts/generate_grammar.rb), and model/asciimath.lml.json, the LML
 # export of every model class.
+#
+# The two dialects share one model: a capture name means the same class in
+# both grammars, with the union of the keys either grammar gives it, so a
+# pma measured value is the same Uncertainty (and Unit) class as a dialect
+# L one. The two must agree on each shared capture's kind. Every registry
+# binding's target must be the type its leaf capture gets here.
 #
 # Usage:
 #   bundle exec ruby scripts/generate_model.rb            write both files
@@ -30,9 +37,11 @@
 require "digest"
 require "json"
 require_relative "amath_shapes"
+require_relative "registry"
 
 ROOT = File.expand_path("..", __dir__)
 RULES = File.join(ROOT, "grammars/asciimath.normalized-rules.json")
+PMA_RULES = File.join(ROOT, "grammars/pma.normalized-rules.json")
 OUT = File.join(ROOT, "lib/amath/model/nodes.rb")
 LML_OUT = File.join(ROOT, "model/asciimath.lml.json")
 TREE = "root"
@@ -43,10 +52,23 @@ RESERVED = { "root" => "Expression", "symbol" => "SymbolNode" }.freeze
 check = ARGV.delete("--check")
 abort "usage: ruby scripts/generate_model.rb [--check]" unless ARGV.empty?
 
-doc = JSON.parse(File.read(RULES, encoding: "UTF-8"))
-shapes = AmathShapes.new(doc.fetch("rules"), normalized: true)
-caps = shapes.solve
+solve = lambda do |path|
+  AmathShapes.new(JSON.parse(File.read(path, encoding: "UTF-8")).fetch("rules"), normalized: true).solve
+end
+caps = solve.call(RULES)
 abort "the normalized grammar has no #{TREE} capture" unless caps.key?(TREE)
+pma_caps = solve.call(PMA_RULES)
+abort "the pma grammar must not capture #{TREE}" if pma_caps.key?(TREE)
+pma_caps.each do |name, shape|
+  if caps.key?(name)
+    a = caps[name].solid
+    b = shape.solid
+    abort "capture #{name} is #{a.to_a.join('|')} in dialect L and #{b.to_a.join('|')} in pma" unless a == b || a.empty? || b.empty?
+    caps[name] |= shape
+  else
+    caps[name] = shape
+  end
+end
 
 kind = lambda do |name|
   solid = caps.fetch(name).solid
@@ -74,6 +96,17 @@ type_of = lambda do |key|
   when :hash then %("#{NS}::#{camel.call(key)}")
   when :array then %("#{NS}::#{camel.call(key)}Item", collection: true)
   else ":string"
+  end
+end
+
+registry = Registry.load
+registry.fetch("bindings").each do |name, binding|
+  binding.each do |leaf, target|
+    next unless caps.key?(leaf)
+
+    type = type_of.call(leaf).delete('"').split(",").first
+    want = target == "string" ? ":string" : target
+    abort "binding #{name}: leaf #{leaf} is #{type}, the registry says #{target}" unless type == want
   end
 end
 
