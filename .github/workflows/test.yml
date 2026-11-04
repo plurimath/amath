@@ -38,6 +38,10 @@ jobs:
         env:
           AMATH_TESTSUITE: ${{ github.workspace }}/tmp/plurimath-testsuite
       - run: gem build amath.gemspec
+      # The registry v2 file and its pinned dialect L edition, and the
+      # reserved-word collision check against the registry and unitsdb.
+      - run: ruby scripts/registry.rb --check
+      - run: bundle exec ruby scripts/check_reserved_words.rb
       # The model classes and their LML export are generated from the
       # normalized grammar; both must match a fresh generation.
       - name: Generated model and LML export are current

@@ -321,11 +321,37 @@ on first use, and cached for the process. Assigning `Amath.artifact_path=`
 clears the cache; it exists for tests and tooling, not for selecting
 alternative grammars in production.
 
+[[registry]]
+== The registry
+
+`data/vocabulary.json` is the shared registry, format `amath-vocabulary/v2`
+(amath#16). Each entry has a `category` (the grammar list it belongs to), a
+`value`, a `dialect` (`legacy`, `pma` or `both`) and a `binding`, which names
+the parse tree leaf (capture) the entry produces and the model type of that
+leaf. `scripts/generate_grammar.rb` checks that every leaf of a dialect L
+binding is a capture of the dialect L grammar.
+
+The dialect L part is pinned by edition. The entries tagged `legacy` or
+`both`, written back in the v1 layout, must give exactly the bytes whose
+sha256 `legacy_edition` records, and the dialect L grammar is generated from
+those bytes. An entry tagged `pma` never reaches it. A new dialect L
+vocabulary comes from `scripts/export_vocabulary.rb` and enters the registry
+with `ruby scripts/registry.rb --import-legacy FILE`, which pins it as the
+next edition and keeps the pma entries. `ruby scripts/registry.rb --check`
+verifies the file and the pin.
+
+The registry also lists the pma reserved words (`unit`, `ustd`, `uexp`,
+`ucov`, `diff`, `quantity`). They are grammar terminals, not entries.
+`scripts/check_reserved_words.rb` fails the build when one of them is a
+spelling of any registry entry, or a unit symbol or unit name in unitsdb.
+CI runs both checks.
+
 [[normalization]]
 == Grammar shape normalization
 
 `scripts/generate_grammar.rb` expands `grammars/asciimath.parg.template`
-with `data/vocabulary.json`, reads every rule with Parsanol's PARG parser into
+with the pinned dialect L edition of the registry `data/vocabulary.json`
+(see <<registry>>), reads every rule with Parsanol's PARG parser into
 a rule tree (`scripts/parg_rule_tree.rb`) and normalizes capture shapes with
 the shared rules N1-N7 of `scripts/normalize_shapes.rb` (the file unicodemath
 and latexmath use, from the option-F proof of concept) and amath's rules N8

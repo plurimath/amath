@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-# data/vocabulary.json + grammars/asciimath.parg.template
+# data/vocabulary.json (legacy edition) + grammars/asciimath.parg.template
 #   -> grammars/asciimath.parg                    the grammar Parsanol compiles
 #   -> grammars/asciimath.wrappers.json           the captures the shape
 #                                                 normalization added
@@ -11,6 +11,12 @@
 #
 # Needs Parsanol (its PARG parser reads the expanded template), not
 # Plurimath. Output is a pure function of the two inputs (no timestamps).
+#
+# The vocabulary is the registry's pinned dialect L edition
+# (scripts/registry.rb): its entries tagged legacy or both, in the v1 layout,
+# byte for byte the v1 file the edition was taken from. The header's
+# "data/vocabulary.json sha256:" line is the sha256 of those edition bytes.
+# Entries tagged pma never reach this grammar.
 #
 # Steps:
 #   1. expand the template with the vocabulary (one rule per line)
@@ -28,6 +34,7 @@ require "digest"
 require "set"
 require_relative "parg_rule_tree"
 require_relative "amath_shapes"
+require_relative "registry"
 
 ROOT = File.expand_path("..", __dir__)
 VOCAB = File.join(ROOT, "data/vocabulary.json")
@@ -418,8 +425,14 @@ end
 check = ARGV.delete("--check")
 abort "usage: ruby scripts/generate_grammar.rb [--check]" unless ARGV.empty?
 
-expanded = Generator.new(File.binread(VOCAB), File.read(TEMPLATE, encoding: "UTF-8")).generate
+registry = Registry.load(VOCAB)
+expanded = Generator.new(Registry.legacy_bytes(registry), File.read(TEMPLATE, encoding: "UTF-8")).generate
 grammar, norm = normalize(expanded)
+captures = norm.rules.values.to_json.scan(/"as":"(\w+)"/).flatten.uniq
+Registry.entries(registry, "legacy").map { |e| e["binding"] }.uniq.each do |name|
+  missing = registry["bindings"].fetch(name).keys - captures
+  abort "binding #{name}: leaf #{missing.join(', ')} is not a capture of the dialect L grammar" unless missing.empty?
+end
 wrappers = "#{JSON.pretty_generate(
   'format' => 'amath-wrappers/1',
   'wrappers' => norm.wrapper_list,
