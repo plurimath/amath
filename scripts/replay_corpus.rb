@@ -201,7 +201,7 @@ module AmathReplayCorpus
                 "differing_rows_by_engine" => counts, "mismatched_rows" => failures.size, "failures" => failures }
     if report
       FileUtils.mkdir_p(File.dirname(report))
-      File.write(report, "#{JSON.pretty_generate(summary, max_nesting: false)}\n")
+      File.binwrite(report, "#{JSON.pretty_generate(summary, max_nesting: false)}\n")
     end
     log.puts "#{rows.size} raw-tree rows from #{summary['raw_tree_payloads']} payloads: " \
              "#{counts.map { |e, n| "#{e} #{n} differ" }.join(', ')}"
