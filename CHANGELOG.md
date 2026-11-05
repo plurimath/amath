@@ -1,0 +1,57 @@
+# Changelog
+
+## 0.2.0 (unreleased)
+
+### Breaking changes
+
+- `Amath.parse` returns a typed model of the formula, an
+  `Amath::Model::Document` built with LutaML Model, instead of the raw
+  Parsanol tree. Catalog symbols are `Amath::Model::MathSymbol` objects with
+  their Unicode `value` and `kind`, uncertainty calls are
+  `Amath::Model::Uncertainty` objects, numbers keep their source text, and
+  the document records the decimal marker. Empty input gives a `Document`
+  with no expression. The model is described in `docs/parser-contract.adoc`.
+  (#24)
+- Parsanol 1.3.134 or later is required (still within `~> 1.3`). (#19, #22,
+  #28)
+
+### Added
+
+- The pma dialect: `Amath.parse(input, dialect: :pma)` parses measured
+  values with uncertainty (`ustd`, `uexp`, `ucov`, `(v +/- u)`, relative
+  `(v +/- p%)`, the shared exponent `(...)e4`, the distribution tags
+  `~rect`, `~triang` and `~arcsine`), `unit(...)` and `diff(...)`, and
+  returns an `Amath::Model::PmaDocument`. Units are parsed with the
+  asciiunits artifact. Refused input raises `Amath::ParseError` with
+  offsets and a `category`. `dialect:` defaults to `:legacy`, and an
+  unknown dialect raises `ArgumentError`. (#27)
+- An LML export of the model in `model/asciimath.lml.json`, generated with
+  the model classes and checked in CI. (#24, #27)
+- Per-target binding artifacts (Ruby, Rust, TypeScript, Python) beside the
+  compiled grammar, verified and paired with it, with their checksums in
+  the manifest. (#22)
+- `data/vocabulary.json` is now registry v2: each entry has a category,
+  value, dialect and binding, and the legacy entries are pinned as an
+  edition so the legacy grammar is byte-identical. A check makes sure no
+  reserved word collides with a registry spelling or a unitsdb unit. (#26)
+- The shared parser stage contract in `docs/stage-contract.adoc`. (#20)
+- `scripts/generate_stage_cases.rb` writes raw-tree and typed-model stage
+  cases for plurimath-testsuite from the corpora. (#23, #25)
+- CI replays the asciimath generation of plurimath-testsuite pinned in
+  `spec/fixtures/testsuite-pin.yml` and checks the pin itself. (#29) The
+  replay runs on Linux, Windows and macOS. (#30)
+
+### Changed
+
+- The grammar artifact is compiled at Parsanol edition 2, since Parsanol
+  1.3.129 and later no longer load edition 1 artifacts. (#19)
+- The legacy raw tree is still available internally through
+  `Amath::Parser.raw`. (#24)
+
+### Fixed
+
+- With `engine: :auto`, input that hits the native engine's recursion limit
+  under Parsanol 1.3.134 is parsed again on the Ruby engine instead of
+  being reported as a parse error. With `engine: :native` it raises
+  `Amath::NestingTooDeep`. (#28)
+- `LICENSE.md` has the full BSD-2-Clause text again. (#21)
