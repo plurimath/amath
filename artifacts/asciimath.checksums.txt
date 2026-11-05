@@ -1,9 +1,9 @@
 # Written by scripts/compile.rb. Envelope and binding checksums are Parsanol's
 # own (PN 2); the sha256 lines are of the files' bytes.
-artifact_checksum sha256:0067804385b88a39218e0092dbee1d02a26f7d140c645cb27d637c7f0d985fc2
-compiler_version 1.3.131
+artifact_checksum sha256:38d3d04d938de7a1989dd7779e725c1c19d6f6fb38a3a65feb4bcc5c8395f369
+compiler_version 1.3.134
 source_hash sha256:8fc391577745dec67f31913a54de1060c6856f5514ed3c11300724a462ae8cfb
-artifacts/asciimath.json sha256:f37ea3d542e933a457cd97d44f3fb829adebdc9e79f29444fa416f81a267aa35
+artifacts/asciimath.json sha256:f7e812476e125729e4f69c00d08083d69e83b4666d3c33b911e3ab88d30988da
 bindings_ruby_checksum sha256:8b2057f9dde92d141b81d0c44152df61cacabb13ad4eafa8b266999d87deea8a binding_version 1
 artifacts/asciimath.bindings.ruby.json sha256:79cda5caa352a1a9a7ea16155be8db95c3bd1ec735a788c4afe6fab26d971ab7
 bindings_rs_checksum sha256:d896d4ae537ccad8eacb83f2dd0ab6e0334aaba17f04f8c16c98f9e2df4b9f06 binding_version 1
