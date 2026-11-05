@@ -115,6 +115,9 @@ module Amath
       else
         artifact.parse(entry, text, mode: mode)
       end
+    rescue Parsanol::RecursionLimitExceeded => e
+      # parsanol 1.3.134+ raises this for native deep nesting.
+      raise NativeRecursionLimit, e.message.lines.first.to_s.strip, cause: nil
     rescue Parsanol::ParseFailed => e
       record(mode)
       raise parse_error(e, artifact, entry, text)
