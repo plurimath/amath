@@ -30,7 +30,7 @@ Gem::Specification.new do |spec|
 
   spec.add_dependency "asciiunits", "0.1.6"
   spec.add_dependency "lutaml-model", "~> 0.8", ">= 0.8.162"
-  spec.add_dependency "parsanol", "~> 1.3", ">= 1.3.131"
+  spec.add_dependency "parsanol", "~> 1.3", ">= 1.3.134"
 
   spec.metadata["rubygems_mfa_required"] = "true"
 end
