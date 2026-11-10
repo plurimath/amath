@@ -40,6 +40,26 @@ cases:
 - id: unit.nested_depth_8
   input: unit((((((((m))))))))
   term: {unit: {literal: (((((((m)))))))}}
+- id: quantity.assertion
+  input: unit(J::energy)
+  term: {unit: {literal: J, quantity: 'q:energy'}}
+- id: quantity.whole
+  note: the assertion binds the whole unit expression
+  input: unit(N*m::torque)
+  term: {unit: {literal: N*m, quantity: 'q:torque'}}
+- id: quantity.spaced
+  input: 'unit( J :: energy )'
+  term: {unit: {literal: J, quantity: 'q:energy'}}
+- id: quantity.name_with_brackets
+  note: a unitsdb name may hold brackets and spaces; the id is the unitsdb unitsml id
+  input: unit(J::ratio logarithm (Np))
+  term: {unit: {literal: J, quantity: 'q:logarithmic_decrement'}}
+- id: quantity.attached
+  input: (10.3 +/- 0.2) unit(J::energy)
+  term: {uncertainty: {value: '10.3', plus_minus: +/-, magnitude: '0.2', unit: {literal: J, quantity: 'q:energy'}}}
+- id: quantity.diff
+  input: diff((5.0 +/- 0.1) unit(K::thermodynamic temperature))
+  term: {diff: {uncertainty: {value: '5.0', plus_minus: +/-, magnitude: '0.1', unit: {literal: K, quantity: 'q:temperature'}}}}
 - id: diff.kelvin
   input: diff((5.0 +/- 0.1) unit(K))
   term: {diff: {uncertainty: {value: '5.0', plus_minus: +/-, magnitude: '0.1', unit: {literal: K}}}}

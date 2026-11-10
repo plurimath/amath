@@ -18,7 +18,8 @@
 # `uexp(`, `ucov(`, `unit(` and `diff(` are single tokens, so a reserved
 # word followed by whitespace matches nothing. The content of unit(...) is
 # captured as text and parsed by the asciiunits artifact (see
-# Amath::Pma); its brackets nest at most 8 deep.
+# Amath::Pma); its brackets nest at most 8 deep. A unit may be
+# followed by `::` and one quantity name (the quantity assertion).
 
 grammar Pma version "1.0.0" {
   any_char = %x00-10FFFF
@@ -50,7 +51,7 @@ grammar Pma version "1.0.0" {
 
   # unit(...): the unit expression text, brackets balanced to a fixed depth.
   # A run of whitespace inside it is kept only before more content.
-  unit_char = !("(" / ")" / ws) any_char
+  unit_char = !("(" / ")" / ws / "::") any_char
   unit_chunk_0 = unit_char / "(" sp *(unit_chunk_1) sp ")" / 1*(ws) &(unit_char / "(")
   unit_chunk_1 = unit_char / "(" sp *(unit_chunk_2) sp ")" / 1*(ws) &(unit_char / "(")
   unit_chunk_2 = unit_char / "(" sp *(unit_chunk_3) sp ")" / 1*(ws) &(unit_char / "(")
@@ -60,7 +61,18 @@ grammar Pma version "1.0.0" {
   unit_chunk_6 = unit_char / "(" sp *(unit_chunk_7) sp ")" / 1*(ws) &(unit_char / "(")
   unit_chunk_7 = unit_char / "(" sp *(unit_chunk_8) sp ")" / 1*(ws) &(unit_char / "(")
   unit_chunk_8 = unit_char / 1*(ws) &(unit_char)
-  unit_ctor = "unit(" sp ((1*(unit_chunk_0)) as literal / "" as empty_list) as unit sp ")"
+
+  # The quantity assertion: `::` and a quantity name after the unit
+  # expression, at most one. The name is text up to the closing bracket;
+  # its own brackets balance one deep (unitsdb names such as
+  # "ratio logarithm (Np)"). Whether the name is a unitsdb quantity is
+  # checked by Amath::Pma, not here.
+  quantity_chunk_0 = unit_char / "(" *(quantity_chunk_1) ")" / 1*(ws) &(unit_char / "(")
+  quantity_chunk_1 = unit_char / 1*(ws) &(unit_char)
+  quantity_ref = 1*(quantity_chunk_0)
+  unit_plain = (1*(unit_chunk_0)) as literal / "" as empty_list
+  unit_asserted = (1*(unit_chunk_0)) as literal sp "::" sp (quantity_ref) as quantity
+  unit_ctor = "unit(" sp (unit_asserted / unit_plain) as unit sp ")"
 
   # A measured value carries its unit inside the uncertainty node, as the
   # dialect L "unitsml(...)" argument does.

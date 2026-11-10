@@ -353,6 +353,14 @@ The content of `unit(...)` is unquoted and parsed by the asciiunits artifact
 artifact the grammar was composed with, and amath refuses to run pma with
 another one (`Amath::ArtifactError`).
 
+A unit may end with a quantity assertion, `unit(J::energy)`: `::` and the
+English name of a unitsdb quantity, at most one, after the whole unit
+expression. The names and their unitsml identifiers are in
+`data/quantities.json`, written by `scripts/quantities.rb` from the unitsdb
+version the Gemfile pins. An unknown name is refused as `quantity-assertion`.
+The `quantity` of the `Amath::Model::Unit` holds the identifier (`q:energy`);
+amath does not check that the quantity fits the unit.
+
 The result is an `Amath::Model::PmaDocument` whose `term` holds
 `uncertainty`, `unit` or `diff`. A measured value is the same
 `Amath::Model::Uncertainty` class dialect L builds, with its unit in `unit`

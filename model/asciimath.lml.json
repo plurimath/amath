@@ -2247,6 +2247,10 @@
         {
           "name": "literal",
           "type": "string"
+        },
+        {
+          "name": "quantity",
+          "type": "string"
         }
       ],
       "mappings": {}

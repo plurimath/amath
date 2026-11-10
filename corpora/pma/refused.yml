@@ -50,12 +50,13 @@ cases:
 - {id: attach.inside_constructor, input: 'ustd(1.230, 0.004, unit(g))', category: unit-attachment, byte_offset: 17, char_offset: 17}
 - {id: attach.plain_number, input: '9.81 unit(m/s^2)', category: unit-attachment, byte_offset: 0, char_offset: 0}
 - {id: attach.diff_plain_number, input: 'diff(5 unit(K))', category: unit-attachment, byte_offset: 5, char_offset: 5}
-- {id: quantity.assertion, input: 'unit(J::energy)', category: quantity-assertion, byte_offset: 6, char_offset: 6}
-- {id: quantity.whole, input: 'unit(N*m::torque)', category: quantity-assertion, byte_offset: 8, char_offset: 8}
 - {id: quantity.no_quantity, input: 'unit(J::)', category: quantity-assertion, byte_offset: 6, char_offset: 6}
 - {id: quantity.no_unit, input: 'unit(::energy)', category: quantity-assertion, byte_offset: 5, char_offset: 5}
-- {id: quantity.twice, input: 'unit(J::energy::work)', category: quantity-assertion, byte_offset: 6, char_offset: 6}
-- {id: quantity.nested, input: 'unit((N::force)*m)', category: quantity-assertion, byte_offset: 7, char_offset: 7}
+- {id: quantity.twice, input: 'unit(J::energy::work)', category: quantity-assertion, byte_offset: 14, char_offset: 14}
+- {id: quantity.nested, input: 'unit((N::force)*m)', category: quantity-assertion, byte_offset: 5, char_offset: 5}
+- {id: quantity.unknown, input: 'unit(J::nonsense)', category: quantity-assertion, byte_offset: 8, char_offset: 8}
+- {id: quantity.outside_unit, input: '::energy', category: quantity-assertion, byte_offset: 0, char_offset: 0}
+- {id: quantity.trailing_text, input: 'unit(J::energy x)', category: quantity-assertion, byte_offset: 8, char_offset: 8}
 - {id: concise.plain, input: '10.3(2)', category: concise, byte_offset: 0, char_offset: 0}
 - {id: concise.bracketed, input: '(10.3(2))', category: concise, byte_offset: 5, char_offset: 5}
 - {id: concise.exponent, input: '(680(41))e-3', category: concise, byte_offset: 4, char_offset: 4}

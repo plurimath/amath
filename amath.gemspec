@@ -22,7 +22,7 @@ Gem::Specification.new do |spec|
 
   spec.files = Dir.chdir(File.expand_path(__dir__)) do
     Dir["lib/**/*.rb", "artifacts/**/*", "corpora/**/*.yml",
-        "data/asciimath-symbols.json", "grammars/asciimath.wrappers.json",
+        "data/asciimath-symbols.json", "data/quantities.json", "grammars/asciimath.wrappers.json",
         "model/**/*", "docs/**/*", "README.adoc", "LICENSE.md"]
       .select { |f| File.file?(f) }
   end
