@@ -17,11 +17,11 @@ module Amath
       def self.included(klass)
         klass.class_eval do
           def value
-            self.value = symbol_value
+            @value = symbol_value
           end
 
           def kind
-            self.kind = symbol_kind
+            @kind = symbol_kind
           end
         end
       end
