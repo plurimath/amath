@@ -138,7 +138,10 @@ module StageCases
 
     instance = nil
     fields = attributes.filter_map do |name, attribute|
-      value = if attribute.derived?
+      # Symbol derivation belongs to the stage, not to a non-portable LML
+      # attribute option. Keep the bound-data producer equal to the live model.
+      symbol_field = klass.include?(Amath::Model::Spelled) && %i[value kind].include?(name)
+      value = if attribute.derived? || symbol_field
                 (instance ||= klass.new(data)).public_send(name)
               else
                 data.fetch(name.to_s) { data[name] }
