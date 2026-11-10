@@ -10,6 +10,22 @@ module Amath
   module Model
     # The derived +value+ and +kind+ of a class holding a catalog spelling.
     module Spelled
+      # The portable declaration describes stored strings. Ruby keeps its
+      # existing live spelling readers by refreshing those typed slots on
+      # access, including after an in-place spelling edit. Target adapters
+      # resolve the same catalog before constructing their generated models.
+      def self.included(klass)
+        klass.class_eval do
+          def value
+            self.value = symbol_value
+          end
+
+          def kind
+            self.kind = symbol_kind
+          end
+        end
+      end
+
       def symbol_value
         spelling && Symbols.lookup(spelling).value
       end
@@ -25,9 +41,10 @@ module Amath
     # it (Amath::Symbols). +value+ and +kind+ are derived from +spelling+.
     class MathSymbol < Lutaml::Model::Serializable
       attribute :spelling, :string
-      attribute :value, :string, method: :symbol_value
-      attribute :kind, :string, method: :symbol_kind
+      attribute :value, :string
+      attribute :kind, :string
       include Spelled
+
     end
   end
 end
@@ -42,6 +59,7 @@ module Amath
     class Document < Lutaml::Model::Serializable
       attribute :expression, "Amath::Model::Expression"
       attribute :decimal, :string
+
     end
 
     # The result of one pma parse (Amath.parse(input, dialect: :pma)): the
@@ -49,6 +67,7 @@ module Amath
     # Uncertainty (and Unit) classes dialect L builds.
     class PmaDocument < Lutaml::Model::Serializable
       attribute :term, "Amath::Model::Term"
+
     end
 
     # Every model class, in name order.
