@@ -64,7 +64,7 @@ jobs:
 
   artifacts:
     name: artifacts (compile --determinism)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       # The artifact records the Parsanol version that compiled it and the
