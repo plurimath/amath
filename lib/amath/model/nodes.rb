@@ -641,6 +641,7 @@ module Amath
     class Unit < Lutaml::Model::Serializable
       attribute :empty_list, :string
       attribute :literal, :string
+      attribute :quantity, :string
     end
 
     # Capture +unitsml+.

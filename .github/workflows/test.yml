@@ -41,6 +41,8 @@ jobs:
       # The registry v2 file and its pinned dialect L edition, and the
       # reserved-word collision check against the registry and unitsdb.
       - run: ruby scripts/registry.rb --check
+      # The pma quantity names, generated from the pinned unitsdb.
+      - run: bundle exec ruby scripts/quantities.rb --check
       - run: bundle exec ruby scripts/check_reserved_words.rb
       # The model classes and their LML export are generated from the
       # normalized grammar; both must match a fresh generation.

@@ -498,9 +498,13 @@ class PmaGenerator
   end
 end
 
+# The pma template writes the captures `literal` and `empty_list` of unit(...)
+# itself (a unit with a quantity assertion holds the unit text and the
+# quantity in one hash, which normalization cannot build from an unwrapped
+# run), so the wrapper-name guard is off for it (normalized: true).
 def normalize_pma(text)
   rules = PargRuleTree.read(text)
-  norm = AmathShapes.new(rules).run
+  norm = AmathShapes.new(rules, normalized: true).run
   clash = norm.collisions
   abort "pma normalization leaves wrapper collisions: #{clash.join('; ')}" unless clash.empty?
 

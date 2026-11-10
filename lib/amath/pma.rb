@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "digest"
 require "json"
 
 module Amath
@@ -18,10 +19,13 @@ module Amath
     ARTIFACT_PATH = File.expand_path("../../artifacts/pma.json", __dir__)
     CHECKSUMS_PATH = File.expand_path("../../artifacts/pma.checksums.txt", __dir__)
     UNITS_ENTRY = "expression"
+    QUANTITIES_PATH = File.expand_path("../../data/quantities.json", __dir__)
 
     @artifact = Artifact.new(ARTIFACT_PATH, entries: [ENTRY])
     @units = nil
     @units_lock = Mutex.new
+    @quantities = nil
+    @quantities_lock = Mutex.new
 
     module_function
 
@@ -48,7 +52,27 @@ module Amath
       end
       check_units(tree, text, mode)
       bound = @artifact.bindings.apply(ENTRY, tree)
-      Model::PmaDocument.new(term: bound.fetch(:term))
+      document = Model::PmaDocument.new(term: bound.fetch(:term))
+      resolve_quantities(document.term)
+      document
+    end
+
+    # The unitsdb quantities a quantity assertion may name: English name
+    # => unitsml id (data/quantities.json, written by scripts/quantities.rb).
+    def quantities
+      @quantities_lock.synchronize { @quantities ||= load_quantities }
+    end
+
+    def load_quantities
+      doc = JSON.parse(File.read(QUANTITIES_PATH))
+      map = doc.fetch("quantities")
+      unless doc.fetch("sha256") == "sha256:#{Digest::SHA256.hexdigest(JSON.generate(map))}"
+        raise ArtifactError, "#{QUANTITIES_PATH} does not match its recorded sha256"
+      end
+
+      map
+    rescue SystemCallError, JSON::ParserError, KeyError => e
+      raise ArtifactError, "quantities cannot be loaded: #{e.class}: #{e.message}"
     end
 
     # The asciiunits artifact, checked against the checksum recorded when
@@ -76,9 +100,9 @@ module Amath
     end
 
     # Every unit(...) text of +tree+ must be a non-empty asciiunits unit
-    # expression. `::` (the quantity assertion) is open in version 1, and
-    # asciiunits has no `::`, so such a unit is refused as a quantity
-    # assertion.
+    # expression (the grammar keeps `::` out of it), and a quantity
+    # assertion after it must name a unitsdb quantity; an unknown name is
+    # refused as a quantity assertion, at the name.
     def check_units(tree, text, mode)
       units_in(tree).each do |unit|
         slice = unit[:literal] || unit[:empty_list]
@@ -89,9 +113,20 @@ module Amath
           units_artifact.parse(UNITS_ENTRY, slice.to_s, mode: mode)
         rescue Parsanol::ParseFailed => e
           inner = ErrorPosition.byte_offset(e, units_artifact, UNITS_ENTRY, slice.to_s)
-          category = slice.to_s.include?("::") ? "quantity-assertion" : "unit-expression"
-          raise Refusal.error(text, inner && (start + inner), category)
+          raise Refusal.error(text, inner && (start + inner), "unit-expression")
         end
+        next unless unit[:quantity]
+
+        name = unit[:quantity]
+        raise Refusal.error(text, byte_start(text, name), "quantity-assertion") unless quantities.key?(name.to_s)
+      end
+    end
+
+    # Replaces the quantity name of every Unit of +term+ by the unitsml id
+    # it resolves to (check_units has refused unknown names).
+    def resolve_quantities(term)
+      [term.unit, term.uncertainty&.unit, term.diff&.uncertainty&.unit].compact.each do |unit|
+        unit.quantity = quantities.fetch(unit.quantity) if unit.quantity
       end
     end
 
@@ -117,7 +152,7 @@ module Amath
       text[0, slice.offset].bytesize
     end
 
-    private_class_method :load_units, :units_in, :byte_start
+    private_class_method :load_units, :load_quantities, :resolve_quantities, :units_in, :byte_start
 
     # The category of a refused pma input, from plurimath docs/pma.adoc
     # "Strict error taxonomy" (plus `no-production` for text that starts
