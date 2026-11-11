@@ -95,6 +95,9 @@ RSpec.describe Amath do
   # decimal:) through "~> 0.1" and walks the raw tree. The typed model is a
   # separate entry point, so the return type never depends on the options.
   describe ".parse (amath 0.1 contract)" do
+    # The production grammar: these inputs are outside the spike fixture.
+    before { described_class.artifact_path = described_class::DEFAULT_ARTIFACT_PATH }
+
     %i[native ruby].each do |engine|
       it "returns the raw tree on engine: #{engine.inspect}" do
         require_native! if engine == :native
