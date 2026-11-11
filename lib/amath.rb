@@ -36,6 +36,15 @@ module Amath
 
   module_function
 
+  # Parse +input+ and return its raw tree, exactly as amath 0.1 did: a
+  # Hash/Array tree with Parsanol::Slice leaves (a plain "" for empty input),
+  # or an Amath::ParseError for rejected input. This is the released 0.1
+  # contract (plurimath 0.11.x depends on it through "~> 0.1") and does not
+  # change; the typed model is Amath.parse_model.
+  def parse(input, decimal: ".", engine: :auto)
+    Parser.raw(input, decimal: decimal, engine: engine)
+  end
+
   # Parse +input+ and return its typed model (see docs/parser-contract.adoc).
   #
   # dialect: :legacy (the default) reads dialect L and returns an
@@ -46,9 +55,9 @@ module Amath
   # ArgumentError, raised before an artifact is loaded.
   #
   # The engine that ran is available afterwards from Amath.last_engine.
-  def parse(input, dialect: :legacy, decimal: ".", engine: :auto)
+  def parse_model(input, dialect: :legacy, decimal: ".", engine: :auto)
     case dialect
-    when :legacy then Parser.parse(input, decimal: decimal, engine: engine)
+    when :legacy then Parser.model(input, decimal: decimal, engine: engine)
     when :pma then Pma.parse(input, decimal: decimal, engine: engine)
     else
       raise ArgumentError,
@@ -57,8 +66,8 @@ module Amath
   end
 
   # The engine (:native or :ruby) that produced the result (tree or
-  # rejection) of the last Amath.parse call on the current thread that
-  # reached the parser; nil before any parse. Under engine: :auto this is
+  # rejection) of the last Amath.parse or Amath.parse_model call on the
+  # current thread that reached the parser; nil before any parse. Under engine: :auto this is
   # :ruby when the native engine hit its recursion limit and amath reran
   # the input on the Ruby engine.
   def last_engine

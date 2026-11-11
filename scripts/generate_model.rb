@@ -127,8 +127,8 @@ classes.sort.each_with_index do |(cname, (capture, keys)), i|
   if keys.include?("spelling")
     # A catalog spelling beside other keys: resolved as MathSymbol's.
     abort "#{cname} has both spelling and #{(keys & %w[value kind]).join(', ')}" if keys.intersect?(%w[value kind])
-    out << "      attribute :value, :string, method: :symbol_value\n"
-    out << "      attribute :kind, :string, method: :symbol_kind\n"
+    out << "      attribute :value, :string\n"
+    out << "      attribute :kind, :string\n"
     out << "      include Spelled\n"
   end
   out << "    end\n"
@@ -140,7 +140,6 @@ out << "  end\nend\n"
 # (or, with --check, the committed) nodes.rb.
 def lml_export
   $LOAD_PATH.unshift(File.join(ROOT, "lib"))
-  require "amath"
   require "amath/model"
   docs = Amath::Model.classes.map do |klass|
     exported = Lutaml::Model::Lml.export(klass)

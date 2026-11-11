@@ -13,7 +13,7 @@ module Amath
 
     ENGINES = %i[auto native ruby].freeze
 
-    # Amath.parse dialect: option values. :legacy is dialect L (asciimath.org
+    # Amath.parse_model dialect: option values. :legacy is dialect L (asciimath.org
     # AsciiMath as Plurimath reads it), :pma is dialect P (plurimath
     # docs/pma.adoc).
     DIALECTS = %i[legacy pma].freeze

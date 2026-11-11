@@ -2,7 +2,7 @@
 
 RSpec.describe Amath do
   it "has a version number" do
-    expect(Amath::VERSION).to eq("0.1.0")
+    expect(Amath::VERSION).to eq("0.2.0")
   end
 
   it "does not load Plurimath" do
@@ -88,6 +88,41 @@ RSpec.describe Amath do
     it "rejects invalid UTF-8" do
       expect { Amath::Parser.raw("x\xFF".b.force_encoding("UTF-8")) }
         .to raise_error(ArgumentError, /not valid UTF-8/)
+    end
+  end
+
+  # The released 0.1 contract: plurimath 0.11.x calls Amath.parse(text,
+  # decimal:) through "~> 0.1" and walks the raw tree. The typed model is a
+  # separate entry point, so the return type never depends on the options.
+  describe ".parse (amath 0.1 contract)" do
+    # The production grammar: these inputs are outside the spike fixture.
+    before { described_class.artifact_path = described_class::DEFAULT_ARTIFACT_PATH }
+
+    %i[native ruby].each do |engine|
+      it "returns the raw tree on engine: #{engine.inspect}" do
+        require_native! if engine == :native
+        %w[x_y sqrt(x) 1,5].each do |input|
+          decimal = input.include?(",") ? "," : "."
+          tree = described_class.parse(input, decimal: decimal, engine: engine)
+          expect(tree).to eq(Amath::Parser.raw(input, decimal: decimal, engine: engine))
+        end
+        expect(described_class.parse("", engine: engine)).to eq("")
+      end
+    end
+
+    it "keeps amath 0.1's keywords, so dialect: is not one of them" do
+      expect { described_class.parse("x", dialect: :legacy) }
+        .to raise_error(ArgumentError, /unknown keyword: :dialect/)
+    end
+
+    it "keeps amath 0.1's Parser.parse" do
+      expect(Amath::Parser.parse("x_y", decimal: ".", engine: :ruby))
+        .to eq(Amath::Parser.raw("x_y", engine: :ruby))
+    end
+
+    it "leaves the typed model to .parse_model" do
+      expect(described_class.parse_model("x_y")).to be_a(Amath::Model::Document)
+      expect(described_class.parse_model("ustd(1.2, 0.1)", dialect: :pma)).to be_a(Amath::Model::PmaDocument)
     end
   end
 end

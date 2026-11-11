@@ -11,7 +11,7 @@ module Amath
   # as {name => kind}. RawTree.legacy removes them again and renests the
   # flat expression chains (Renester), so the result is exactly the legacy
   # tree. It is not public API: the stage-case generator and the parity
-  # specs read it; Amath.parse returns the typed model.
+  # specs read it; Amath.parse returns this raw tree; Amath.parse_model returns the typed model.
   #
   # Unwrapping replaces each wrapper by the value legacy produced there and
   # re-runs Parslet's flattening algebra (Parsanol::Atoms::CanFlatten

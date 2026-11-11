@@ -515,8 +515,8 @@ module Amath
     class TableLeft < Lutaml::Model::Serializable
       attribute :spelling, :string
       attribute :table_left, "Amath::Model::TableLeft"
-      attribute :value, :string, method: :symbol_value
-      attribute :kind, :string, method: :symbol_kind
+      attribute :value, :string
+      attribute :kind, :string
       include Spelled
     end
 
@@ -524,8 +524,8 @@ module Amath
     class TableRight < Lutaml::Model::Serializable
       attribute :spelling, :string
       attribute :table_right, "Amath::Model::TableRight"
-      attribute :value, :string, method: :symbol_value
-      attribute :kind, :string, method: :symbol_kind
+      attribute :value, :string
+      attribute :kind, :string
       include Spelled
     end
 

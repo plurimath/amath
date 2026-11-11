@@ -5,7 +5,7 @@ require "json"
 
 module Amath
   # pma (dialect P, "plurimath ascii"), selected with
-  # Amath.parse(input, dialect: :pma); specified by plurimath
+  # Amath.parse_model(input, dialect: :pma); specified by plurimath
   # docs/pma.adoc. It parses with its own artifact (artifacts/pma.json) and
   # never falls back to dialect L. The content of unit(...) is parsed by the
   # asciiunits artifact, the one whose checksum artifacts/pma.checksums.txt

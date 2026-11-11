@@ -24,8 +24,9 @@ reads Plurimath constants.
 
 [source,ruby]
 ----
-Amath.parse(input, decimal: ".", engine: :auto) # => Amath::Model::Document
-Amath.parse(input, dialect: :pma)               # => Amath::Model::PmaDocument
+Amath.parse_model(input, decimal: ".", engine: :auto) # => Amath::Model::Document
+Amath.parse_model(input, dialect: :pma)               # => Amath::Model::PmaDocument
+Amath.parse(input, decimal: ".", engine: :auto)       # => raw tree (amath 0.1 contract)
 Amath.last_engine                                # => :native, :ruby or nil
 Amath.native_available?                          # => true / false
 Amath.artifact_path                              # => String
@@ -51,7 +52,7 @@ There is no second public parse method. The raw parse tree is internal
 
 === Successful result: the typed model
 
-`Amath.parse` returns an `Amath::Model::Document`, a LutaML Model object:
+`Amath.parse_model` returns an `Amath::Model::Document`, a LutaML Model object:
 
 `expression`:: the expression, an `Amath::Model::Expression`; `nil` for
 empty input (`""`), the declared empty representation.
@@ -144,7 +145,7 @@ The input/tree and consuming-reader decimal expectations are recorded in
 payload for the `asciimath` stage generations in plurimath-testsuite, after
 checking that both engines return the same tree and that it carries the
 corpus texts. With `--boundary typed-model` it writes `model-<group>`
-payloads instead: the `Amath.parse` Document of each case, written from the
+payloads instead: the `Amath.parse_model` Document of each case, written from the
 bound data the model is built from and typed by the declared model classes
 (`model/asciimath.lml.json`), after checking that both engines agree and that
 the built model gives the same rows. Its `--producer` option writes the
@@ -253,7 +254,7 @@ main thread it parses 1,000 levels of `(`; rejecting deep invalid input needs
 more stack, because Parsanol reparses it with its recursive interpreter to
 find the position, so a rejection of input a few hundred levels deep can
 raise `Amath::NestingTooDeep` instead of a positioned `ParseError`. amath
-never lets `SystemStackError` escape from `Amath.parse`.
+never lets `SystemStackError` escape from `Amath.parse` or `Amath.parse_model`.
 
 == Errors
 
@@ -314,7 +315,7 @@ is character 8. To convert a byte offset to Parslet's character offset:
 char = input.byteslice(0, byte_offset).length
 ----
 
-where `input` is the UTF-8 string passed to `Amath.parse`.
+where `input` is the UTF-8 string passed to `Amath.parse` or `Amath.parse_model`.
 
 Known difference from Parslet: the deepest rejection position can differ by
 one. For `x 1.` the A0 spike measured Parslet's deepest failure at 3 and
@@ -331,7 +332,7 @@ alternative grammars in production.
 [[pma]]
 == pma (dialect P)
 
-`Amath.parse(input, dialect: :pma)` reads pma, the strict ASCII dialect
+`Amath.parse_model(input, dialect: :pma)` reads pma, the strict ASCII dialect
 specified in plurimath `docs/pma.adoc` (amath#16). It parses with its own
 artifact, `artifacts/pma.json` (grammar `grammars/pma.parg`, generated from
 `grammars/pma.parg.template` and the registry's pma entries), and never with
@@ -456,13 +457,15 @@ optional part at a named position did not match (an unclosed paren's
 `rparen`) is a `nil` attribute.
 
 [[raw-tree]]
-== The internal raw tree
+== The raw tree
 
-`Amath::Parser.raw(input, decimal:, engine:)` returns the parse tree of the
-legacy Plurimath grammar, exactly as amath 0.1's `Amath.parse` returned it
-(Hash/Array with `Parsanol::Slice` leaves, a plain `""` for empty input). It
-is internal, for the stage-case generator and the parity specs, not public
-API. `Amath::RawTree` builds it from the normalized grammar's tree: it
+`Amath.parse(input, decimal:, engine:)` and `Amath::Parser.raw(input,
+decimal:, engine:)` return the parse tree of the legacy Plurimath grammar,
+exactly as amath 0.1's `Amath.parse` returned it (Hash/Array with
+`Parsanol::Slice` leaves, a plain `""` for empty input). `Amath.parse` keeps
+this amath 0.1 contract unchanged, keywords included (it takes no
+`dialect:`), because released Plurimath 0.11 depends on amath `~> 0.1` and
+walks this tree; the typed model is `Amath.parse_model`. `Amath::RawTree` builds it from the normalized grammar's tree: it
 removes every wrapper capture listed in `grammars/asciimath.wrappers.json`,
 re-running Parsanol's merge of sequence results, and `Amath::Renester`
 rebuilds the legacy nesting of the flat chains. Parity is checked as
@@ -472,7 +475,7 @@ rebuilds the legacy nesting of the flat chains. Parity is checked as
 
 Each entry rule puts the whole expression under one `root` capture and
 declares one binding for it, `root -> expression (any)`: the complete tree as
-plain data. `Amath.parse` applies it (`Amath.bindings`, the paired Ruby
+plain data. `Amath.parse_model` applies it (`Amath.bindings`, the paired Ruby
 binding artifact) and builds `Document.new(expression: ...)`; lutaml-model
 constructs the nested model from the declared attribute types, with no
 hand-written tree walker.

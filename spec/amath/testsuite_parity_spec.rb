@@ -5,7 +5,7 @@ require_relative "../../scripts/generate_stage_cases"
 
 # Raw-tree parity with the plurimath-testsuite asciimath stage rows: the
 # internal raw tree (the normalized grammar's tree, unwrapped and renested)
-# equals each row's oracle tree, and Amath.parse builds the typed model of
+# equals each row's oracle tree, and Amath.parse_model builds the typed model of
 # every row. Runs when AMATH_TESTSUITE names a plurimath-testsuite checkout
 # (CI checks out the generation the test workflow pins).
 RSpec.describe "plurimath-testsuite asciimath parity" do
@@ -54,7 +54,7 @@ RSpec.describe "plurimath-testsuite asciimath parity" do
 
         tree = Amath::Parser.raw(row[:input], decimal: row[:decimal], engine: engine)
         ok = row[:tagged] ? StageCases.tagged(tree, row[:input]) == row[:tagged] : texts(tree) == row[:parse_tree]
-        doc = Amath.parse(row[:input], decimal: row[:decimal], engine: engine)
+        doc = Amath.parse_model(row[:input], decimal: row[:decimal], engine: engine)
         ok &&= doc.is_a?(Amath::Model::Document) && (row[:input].empty? || doc.expression)
         row[:id] unless ok
       end
