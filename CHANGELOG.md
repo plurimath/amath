@@ -2,22 +2,24 @@
 
 ## 0.2.0 (unreleased)
 
-### Breaking changes
+### Changed
 
-- `Amath.parse` returns a typed model of the formula, an
-  `Amath::Model::Document` built with LutaML Model, instead of the raw
-  Parsanol tree. Catalog symbols are `Amath::Model::MathSymbol` objects with
-  their Unicode `value` and `kind`, uncertainty calls are
-  `Amath::Model::Uncertainty` objects, numbers keep their source text, and
-  the document records the decimal marker. Empty input gives a `Document`
-  with no expression. The model is described in `docs/parser-contract.adoc`.
-  (#24)
+- `Amath.parse_model` returns a typed model of the formula, an
+  `Amath::Model::Document` built with LutaML Model. Catalog symbols are
+  `Amath::Model::MathSymbol` objects with their Unicode `value` and `kind`,
+  uncertainty calls are `Amath::Model::Uncertainty` objects, numbers keep
+  their source text, and the document records the decimal marker. Empty
+  input gives a `Document` with no expression. The model is described in
+  `docs/parser-contract.adoc`. (#24)
+- `Amath.parse` is unchanged from 0.1.0: it still returns the raw Parsanol
+  tree and takes only `decimal:` and `engine:`. Plurimath 0.11 depends on
+  amath `~> 0.1` and reads that tree, so it keeps working with 0.2.0.
 - Parsanol 1.3.134 or later is required (still within `~> 1.3`). (#19, #22,
   #28)
 
 ### Added
 
-- The pma dialect: `Amath.parse(input, dialect: :pma)` parses measured
+- The pma dialect: `Amath.parse_model(input, dialect: :pma)` parses measured
   values with uncertainty (`ustd`, `uexp`, `ucov`, `(v +/- u)`, relative
   `(v +/- p%)`, the shared exponent `(...)e4`, the distribution tags
   `~rect`, `~triang` and `~arcsine`), `unit(...)` and `diff(...)`, and

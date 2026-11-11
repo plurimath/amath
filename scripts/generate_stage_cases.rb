@@ -9,7 +9,7 @@
 # internal raw-tree boundary) on each selected engine, and the raw tree is
 # written to <group>.yaml.
 #
-# typed-model: every case is parsed by Amath.parse on each selected engine,
+# typed-model: every case is parsed by Amath.parse_model on each selected engine,
 # and the typed model (Amath::Model::Document) is written to
 # model-<group>.yaml with row ids "<id>.model". The rows are written from
 # the bound data the model is built from (the artifact's `(any)` binding
@@ -104,7 +104,7 @@ module StageCases
   end
 
   # The internal raw tree (Amath::Parser.raw, the legacy-shaped tree the
-  # normalized grammar's tree unwraps to); Amath.parse returns the model.
+  # normalized grammar's tree unwraps to); Amath.parse_model returns the model.
   def parse(input, engine)
     tree = Amath::Parser.raw(input, decimal: DECIMAL, engine: engine)
     return tree if Amath.last_engine == engine
@@ -193,7 +193,7 @@ module StageCases
 
     data = { "decimal" => DECIMAL }
     data["expression"] = Amath.bindings.apply(entry, tree).fetch(:expression) unless text.empty?
-    document = Amath.parse(input, decimal: DECIMAL, engine: engine)
+    document = Amath.parse_model(input, decimal: DECIMAL, engine: engine)
     [model_node(Amath::Model::Document, data, "/"), document]
   end
 
@@ -228,7 +228,7 @@ module StageCases
     end
     { "schema" => SCHEMA, "group" => group,
       "description" => "amath raw trees for corpora/#{group}.yml " \
-                       "(#{corpus.fetch('issue')}). Amath.parse has no " \
+                       "(#{corpus.fetch('issue')}). Amath.parse_model has no " \
                        "preprocessing, so preprocessed is the input.",
       "boundary" => "raw-tree", "cases" => cases }
   end
@@ -241,10 +241,10 @@ module StageCases
         "expected" => expected_model(entry, engines) }
     end
     { "schema" => SCHEMA, "group" => "model-#{source}",
-      "description" => "amath typed models (Amath.parse) for corpora/#{source}.yml " \
+      "description" => "amath typed models (Amath.parse_model) for corpora/#{source}.yml " \
                        "(#{corpus.fetch('issue')}). Each object is its model class " \
                        "(#{LML}) with its set fields in declaration order; nil " \
-                       "fields are left out. Amath.parse has no preprocessing, so " \
+                       "fields are left out. Amath.parse_model has no preprocessing, so " \
                        "preprocessed is the input.",
       "boundary" => "typed-model", "cases" => cases }
   end
@@ -323,7 +323,7 @@ module StageCases
       "semantic_boundary" => boundary,
       "configuration" => { "decimal" => DECIMAL,
                            "engines" => engines.map(&:to_s),
-                           "entry_point" => model ? "Amath.parse" : "Amath::Parser.raw" } }
+                           "entry_point" => model ? "Amath.parse_model" : "Amath::Parser.raw" } }
   end
 
   def options(argv)

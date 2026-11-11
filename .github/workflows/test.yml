@@ -56,7 +56,7 @@ jobs:
           bundle exec ruby scripts/generate_stage_cases.rb --out "$RUNNER_TEMP/stage-a"
           bundle exec ruby scripts/generate_stage_cases.rb --out "$RUNNER_TEMP/stage-b"
           diff -r "$RUNNER_TEMP/stage-a" "$RUNNER_TEMP/stage-b"
-      # The same for the typed-model payloads (Amath.parse): the bound data
+      # The same for the typed-model payloads (Amath.parse_model): the bound data
       # and the built model must give the same rows on both engines.
       - name: Generate the testsuite typed-model payloads from corpora/
         run: |

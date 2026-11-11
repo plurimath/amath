@@ -3,7 +3,7 @@
 require "lutaml/model"
 
 module Amath
-  # The typed AsciiMath model Amath.parse returns, declared with LutaML
+  # The typed AsciiMath model Amath.parse_model returns, declared with LutaML
   # Model. Its classes are generated from the normalized grammar's capture
   # shapes (scripts/generate_model.rb -> lib/amath/model/nodes.rb), except
   # MathSymbol and Document below. See docs/parser-contract.adoc.
@@ -62,7 +62,7 @@ module Amath
 
     end
 
-    # The result of one pma parse (Amath.parse(input, dialect: :pma)): the
+    # The result of one pma parse (Amath.parse_model(input, dialect: :pma)): the
     # one term pma version 1 reads. Its measured values are the same
     # Uncertainty (and Unit) classes dialect L builds.
     class PmaDocument < Lutaml::Model::Serializable

@@ -47,25 +47,30 @@ https://github.com/lutaml/lutaml-model[LutaML Model].
 ----
 require "amath"
 
-doc = Amath.parse("x+1")
+doc = Amath.parse_model("x+1")
 doc.expression.expr.amath_chain.first.amath_step.sequence.symbol.spelling
 # => "x"
 ----
 
-The result is an `Amath::Model::Document`, built with LutaML Model. Its
+`Amath.parse_model` returns an `Amath::Model::Document`, built with LutaML Model. Its
 `expression` holds the formula; a run of terms such as `x + 1` is one flat
 list of items, however long it is. Symbols such as `alpha` or `->` are
 `Amath::Model::MathSymbol` objects that carry the text as written, its
 Unicode value and its kind. Numbers keep the text you wrote. Empty input
 gives a document whose `expression` is nil.
 
+`Amath.parse` keeps the amath 0.1 contract: it returns the raw Parsanol tree
+(a Hash/Array tree with `Parsanol::Slice` leaves, or `""` for empty input)
+and takes only `decimal:` and `engine:`. Plurimath 0.11 uses it; new code
+should call `Amath.parse_model`.
+
 Numbers use a dot as the decimal marker unless you say otherwise. A comma and
 the Arabic decimal separator are also supported:
 
 [source,ruby]
 ----
-Amath.parse("1,5", decimal: ",")
-Amath.parse("1\u066B5", decimal: "\u066B")
+Amath.parse_model("1,5", decimal: ",")
+Amath.parse_model("1\u066B5", decimal: "\u066B")
 ----
 
 Input that is not valid AsciiMath raises `Amath::ParseError`, which tells you
@@ -74,7 +79,7 @@ where the parser gave up:
 [source,ruby]
 ----
 begin
-  Amath.parse("x 1.")
+  Amath.parse_model("x 1.")
 rescue Amath::ParseError => e
   e.char_offset # => position in characters
   e.byte_offset # => position in UTF-8 bytes
@@ -108,7 +113,7 @@ Shared exponents can be written as `ustd((3.85, 0.23)e4)` or
 `ustd(680(41)e-3)`; see the link:docs/parser-contract.adoc[parser contract]
 for the model fields and the corresponding expanded/interval call forms.
 
-`Amath.parse(input, dialect: :pma)` reads pma (dialect P, the strict ASCII
+`Amath.parse_model(input, dialect: :pma)` reads pma (dialect P, the strict ASCII
 dialect of
 https://github.com/plurimath/amath/issues/16[plurimath/amath#16], specified
 in Plurimath's `docs/pma.adoc`): measured literals such as
