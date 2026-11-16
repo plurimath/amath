@@ -58,8 +58,14 @@ RSpec.describe "plurimath-testsuite asciimath parity" do
       require_native! if engine == :native
       rows = self.class.rows(generation)
       expect(rows.size).to eq(expected_rows)
+      # Append-only supersessions (the text-unitsml-valid-r2 pattern): a row
+      # whose id has an -r2 sibling is kept for history and is superseded by
+      # that sibling; only the sibling replays.
+      superseded = rows.select { |r| r[:id].include?("-r2") }
+                       .to_h { |r| [r[:id].sub("-r2", ""), r[:id]] }
       failures = rows.filter_map do |row|
         next if row[:parse_tree].nil? && row[:tagged].nil?
+        next if superseded.key?(row[:id])
 
         if row[:model]
           tagged_model, = StageCases.model(row[:input], engine)
