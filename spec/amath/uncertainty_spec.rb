@@ -3,10 +3,12 @@
 require "spec_helper"
 require "yaml"
 
-# AsciiMath measurement-uncertainty syntax (plurimath#493): ustd(...),
-# uexp(...) and ucov(...). The trees are the contract in Plurimath's
-# docs/uncertainty-asciimath-tree.md: {expr: {sequence: {uncertainty: {...}}}}
-# with bare text leaves.
+# AsciiMath measurement-uncertainty syntax (plurimath#493, quoted channel
+# per amath#17): "ustd(...)", "uexp(...)" and "ucov(...)" ride asciimath's
+# own string literal; the bareword call forms are gone and fall back to
+# letters exactly as in standard asciimath. The trees are the contract in
+# Plurimath's docs/uncertainty-asciimath-tree.md:
+# {expr: {sequence: {uncertainty: {...}}}} with bare text leaves.
 module UncertaintyTrees
   ARTIFACT = File.expand_path("../../artifacts/asciimath.json", __dir__)
 
@@ -50,20 +52,21 @@ module UncertaintyTrees
     "ordinary_pm.concise_lookalike" => :plain,
   }.freeze
 
-  # Forms the contract does not cover, built from the tree document.
+  # Forms the contract does not cover, built from the tree document. The
+  # quoted channel: the whole call rides one string literal.
   EXTRA = {
-    "ustd(-1.5, 0.2)" =>
+    "\"ustd(-1.5, 0.2)\"" =>
       { uncertainty_class: "ustd", value: "-1.5", magnitude: "0.2" },
-    "ustd(1.230(4), \"unitsml(kg)\")" =>
+    "\"ustd(1.230(4), \"unitsml(kg)\")\"" =>
       { uncertainty_class: "ustd", value: "1.230", concise_digits: "4",
         unit: "kg" },
-    "uexp(10.0, 0.3, 2, 0.95, \"unitsml(m)\")" =>
+    "\"uexp(10.0, 0.3, 2, 0.95, \"unitsml(m)\")\"" =>
       { uncertainty_class: "uexp", value: "10.0", magnitude: "0.3",
         coverage_factor: "2", coverage_probability: "0.95", unit: "m" },
-    "ucov(1.024, 0.983, 1.088, 0.95)" =>
+    "\"ucov(1.024, 0.983, 1.088, 0.95)\"" =>
       { uncertainty_class: "ucov", value: "1.024", lower: "0.983",
         upper: "1.088", coverage_probability: "0.95" },
-    "ucov(1.024, 0.983, 1.088, 0.95, symmetric, \"unitsml(g)\")" =>
+    "\"ucov(1.024, 0.983, 1.088, 0.95, symmetric, \"unitsml(g)\")\"" =>
       { uncertainty_class: "ucov", value: "1.024", lower: "0.983",
         upper: "1.088", coverage_probability: "0.95",
         interval_kind: "symmetric", unit: "g" },
@@ -197,7 +200,7 @@ RSpec.describe "AsciiMath uncertainty syntax" do
       end
 
       it "places the node where any other operand sits" do
-        tree = UncertaintyTrees.texts(parse("m = ustd(1.23, 0.04)", engine))
+        tree = UncertaintyTrees.texts(parse('m = "ustd(1.23, 0.04)"', engine))
         expect(tree.dig(:expr, :expr, :expr, :sequence, :uncertainty))
           .to eq(uncertainty_class: "ustd", value: "1.23", magnitude: "0.04")
       end

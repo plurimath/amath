@@ -41,7 +41,9 @@ RSpec.describe "Amath.parse_model typed model" do
       it "keeps a flat expression chain as a list of items" do
         list = items(Amath.parse_model("a+b", engine: engine))
         expect(list.map(&:class).uniq).to eq([Amath::Model::AmathChainItem])
-        expect(list.filter_map { |i| i.amath_step&.sequence&.symbol&.spelling }).to eq(%w[a + b])
+        expect(list.filter_map do |i|
+          i.amath_step&.sequence&.symbol&.spelling
+        end).to eq(%w[a + b])
         expect(list.last.amath_end).to be_an_instance_of(Amath::Model::AmathEnd)
       end
 
@@ -49,7 +51,8 @@ RSpec.describe "Amath.parse_model typed model" do
         list = items(Amath.parse_model("alpha -> (x)", engine: engine))
         alpha = list.first.amath_step.sequence.symbol
         expect(alpha).to be_an_instance_of(Amath::Model::MathSymbol)
-        expect([alpha.spelling, alpha.value, alpha.kind]).to eq(%w[alpha α symbol])
+        expect([alpha.spelling, alpha.value,
+                alpha.kind]).to eq(%w[alpha α symbol])
         arrow = list[1].amath_step.sequence.symbol
         expect([arrow.spelling, arrow.value]).to eq(%w[-> →])
         paren = list[2].amath_step.sequence.intermediate_exp
@@ -58,8 +61,10 @@ RSpec.describe "Amath.parse_model typed model" do
       end
 
       it "keeps an unlisted symbol as its own text" do
-        symbol = items(Amath.parse_model("x", engine: engine)).first.amath_step.sequence.symbol
-        expect([symbol.spelling, symbol.value, symbol.kind]).to eq(%w[x x unlisted])
+        symbol = items(Amath.parse_model("x",
+                                         engine: engine)).first.amath_step.sequence.symbol
+        expect([symbol.spelling, symbol.value,
+                symbol.kind]).to eq(%w[x x unlisted])
       end
 
       {
@@ -75,8 +80,10 @@ RSpec.describe "Amath.parse_model typed model" do
       end
 
       it "types a shared-exponent uncertainty form" do
-        u = items(Amath.parse_model('uexp((1.50, 0.20)e-3, 2, 0.95, "unitsml(m)")', engine: engine))
-            .first.amath_step.sequence.uncertainty
+        u = items(Amath.parse_model(
+                    '"uexp((1.50, 0.20)e-3, 2, 0.95, "unitsml(m)")"', engine: engine
+                  ))
+          .first.amath_step.sequence.uncertainty
         expect(u).to be_an_instance_of(Amath::Model::Uncertainty)
         expect([u.uncertainty_class, u.value, u.magnitude, u.shared_exponent,
                 u.coverage_factor, u.coverage_probability, u.unit.literal])
@@ -84,9 +91,11 @@ RSpec.describe "Amath.parse_model typed model" do
       end
 
       it "types ucov with its interval kind" do
-        u = items(Amath.parse_model("ucov(5, 4, 6, 0.9, shortest)", engine: engine))
-            .first.amath_step.sequence.uncertainty
-        expect([u.uncertainty_class, u.value, u.lower, u.upper, u.coverage_probability, u.interval_kind])
+        u = items(Amath.parse_model('"ucov(5, 4, 6, 0.9, shortest)"',
+                                    engine: engine))
+          .first.amath_step.sequence.uncertainty
+        expect([u.uncertainty_class, u.value, u.lower, u.upper,
+                u.coverage_probability, u.interval_kind])
           .to eq(%w[ucov 5 4 6 0.9 shortest])
       end
 
@@ -106,17 +115,23 @@ RSpec.describe "Amath.parse_model typed model" do
   end
 
   it "types every corpus uncertainty case with its source texts" do
-    corpus = YAML.safe_load_file(File.expand_path("../../corpora/uncertainty-shared-exponent.yml", __dir__))
+    corpus = YAML.safe_load_file(File.expand_path(
+                                   "../../corpora/uncertainty-shared-exponent.yml", __dir__
+                                 ))
     corpus.fetch("cases").each do |c|
       u = items(Amath.parse_model(c.fetch("input"))).first.amath_step.sequence.uncertainty
       # A unit is a text run (rule N8): its text is unit.literal.
-      got = c.fetch("tree").to_h { |k, _| [k, k == "unit" ? u.unit.literal : u.public_send(k)] }
+      got = c.fetch("tree").to_h do |k, _|
+        [k, k == "unit" ? u.unit.literal : u.public_send(k)]
+      end
       expect(got).to eq(c.fetch("tree").transform_values(&:to_s))
     end
   end
 
   it "rebuilds the legacy tree of every corpus case from the raw tree" do
-    corpus = YAML.safe_load_file(File.expand_path("../../corpora/uncertainty-shared-exponent.yml", __dir__))
+    corpus = YAML.safe_load_file(File.expand_path(
+                                   "../../corpora/uncertainty-shared-exponent.yml", __dir__
+                                 ))
     corpus.fetch("cases").each do |c|
       tree = Amath::Parser.raw(c.fetch("input"), engine: :ruby)
       leaf = tree.dig(:expr, :sequence, :uncertainty)

@@ -52,7 +52,8 @@ RSpec.describe "Shared-exponent uncertainty syntax" do
           )
           uncertainty_nodes(tree).fetch(0).each_value do |leaf|
             expect(leaf).to be_a(Parsanol::Slice)
-            expect(input.byteslice(leaf.offset, leaf.to_s.bytesize)).to eq(leaf.to_s)
+            expect(input.byteslice(leaf.offset,
+                                   leaf.to_s.bytesize)).to eq(leaf.to_s)
           end
         end
       end
@@ -60,29 +61,31 @@ RSpec.describe "Shared-exponent uncertainty syntax" do
       it "keeps uncertainty decimals independent of the selected ordinary-number marker" do
         [",", "٫"].each do |marker|
           node = uncertainty_nodes(
-            Amath::Parser.raw("ustd((3.85, 0.23)e4)", decimal: marker, engine: engine),
+            Amath::Parser.raw('"ustd((3.85, 0.23)e4)"', decimal: marker,
+                                                        engine: engine),
           ).fetch(0)
 
           expect(texts(node)).to eq(
             "uncertainty_class" => "ustd", "value" => "3.85",
-            "magnitude" => "0.23", "shared_exponent" => "4",
+            "magnitude" => "0.23", "shared_exponent" => "4"
           )
           expect(Amath.last_engine).to eq(engine)
         end
       end
 
       it "retains byte offsets after multibyte text and trailing operands" do
-        input = 'text(é) + ustd((-3.850, 0.230)e+4) / x'
+        input = 'text(é) + "ustd((-3.850, 0.230)e+4)" / x'
         tree = Amath::Parser.raw(input, engine: engine)
         node = uncertainty_nodes(tree).fetch(0)
 
         expect(texts(node)).to eq(
           "uncertainty_class" => "ustd", "value" => "-3.850",
-          "magnitude" => "0.230", "shared_exponent" => "+4",
+          "magnitude" => "0.230", "shared_exponent" => "+4"
         )
         expect(node.fetch(:shared_exponent).offset).to eq(input.b.index("+4"))
         node.each_value do |leaf|
-          expect(input.byteslice(leaf.offset, leaf.to_s.bytesize)).to eq(leaf.to_s)
+          expect(input.byteslice(leaf.offset,
+                                 leaf.to_s.bytesize)).to eq(leaf.to_s)
         end
         expect(texts(tree).inspect).to include('"x"')
       end
@@ -95,7 +98,7 @@ RSpec.describe "Shared-exponent uncertainty syntax" do
         "ustd((+3.85, 0.23)e4)", "ustd((3.85, -0.23)e4)",
         "ustd(680(41) e-3)", "ustd(680(41)e-)",
         "uexp((3.85, -0.23)e4, 2)",
-        "ucov((1.024, -0.983, 1.088)e-3, 0.95)",
+        "ucov((1.024, -0.983, 1.088)e-3, 0.95)"
       ].each do |input|
         it "keeps malformed uncertainty #{input.inspect} on the ordinary fallback" do
           tree = Amath::Parser.raw(input, engine: engine)

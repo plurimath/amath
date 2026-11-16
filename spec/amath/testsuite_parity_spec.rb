@@ -10,7 +10,15 @@ require_relative "../../scripts/generate_stage_cases"
 # (CI checks out the generation the test workflow pins).
 RSpec.describe "plurimath-testsuite asciimath parity" do
   root = ENV.fetch("AMATH_TESTSUITE", nil)
-  generation = File.join(root.to_s, "stages/asciimath/generations/000002/payloads")
+  ledger_path = root ? File.join(root, "generations/asciimath.yaml") : nil
+  ledger = if ledger_path && File.file?(ledger_path)
+             YAML.safe_load_file(
+               ledger_path, aliases: true
+             )
+           end
+  latest = ledger&.fetch("entries")&.last
+  generation = latest ? File.join(root, latest.fetch("path"), "payloads") : nil
+  expected_rows = latest&.fetch("rows")
 
   def self.rows(dir)
     Dir[File.join(dir, "*.yaml")].sort.flat_map do |file|
@@ -33,7 +41,7 @@ RSpec.describe "plurimath-testsuite asciimath parity" do
   end
 
   before(:all) do
-    skip "set AMATH_TESTSUITE to a plurimath-testsuite checkout" unless root && File.directory?(generation)
+    skip "set AMATH_TESTSUITE to a plurimath-testsuite checkout" unless root && File.directory?(generation.to_s)
     Amath.artifact_path = Amath::DEFAULT_ARTIFACT_PATH
     @artifact = Amath.artifact
     @bindings = Amath.bindings
@@ -45,16 +53,23 @@ RSpec.describe "plurimath-testsuite asciimath parity" do
   end
 
   %i[native ruby].each do |engine|
-    it "matches every generation-2 oracle tree and builds every model on #{engine}" do
+    it "matches every #{latest&.fetch('generation') || 'ledger'} oracle tree and builds every model on #{engine}" do
       require_native! if engine == :native
       rows = self.class.rows(generation)
-      expect(rows.size).to eq(183)
+      expect(rows.size).to eq(expected_rows)
       failures = rows.filter_map do |row|
         next if row[:parse_tree].nil? && row[:tagged].nil?
 
-        tree = Amath::Parser.raw(row[:input], decimal: row[:decimal], engine: engine)
-        ok = row[:tagged] ? StageCases.tagged(tree, row[:input]) == row[:tagged] : texts(tree) == row[:parse_tree]
-        doc = Amath.parse_model(row[:input], decimal: row[:decimal], engine: engine)
+        tree = Amath::Parser.raw(row[:input], decimal: row[:decimal],
+                                              engine: engine)
+        ok = if row[:tagged]
+               StageCases.tagged(tree,
+                                 row[:input]) == row[:tagged]
+             else
+               texts(tree) == row[:parse_tree]
+             end
+        doc = Amath.parse_model(row[:input], decimal: row[:decimal],
+                                             engine: engine)
         ok &&= doc.is_a?(Amath::Model::Document) && (row[:input].empty? || doc.expression)
         row[:id] unless ok
       end
