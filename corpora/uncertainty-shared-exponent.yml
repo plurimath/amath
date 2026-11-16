@@ -3,8 +3,8 @@ issue: https://github.com/plurimath/amath/issues/13
 contract: Original source leaves and optional shared_exponent; normalized_model_text
   is the exact-decimal consuming-reader expectation, not a transformed Amath slice.
 cases:
-- id: standard.positive
-  input: ustd((3.85, 0.23)e4)
+- id: standard.positive-r2
+  input: '"ustd((3.85, 0.23)e4)"'
   tree:
     uncertainty_class: ustd
     value: '3.85'
@@ -13,8 +13,8 @@ cases:
   normalized_model_text:
     value: '38500'
     magnitude: '2300'
-- id: standard.negative
-  input: ustd((-3.850, 0.230)e+4)
+- id: standard.negative-r2
+  input: '"ustd((-3.850, 0.230)e+4)"'
   tree:
     uncertainty_class: ustd
     value: '-3.850'
@@ -23,8 +23,8 @@ cases:
   normalized_model_text:
     value: '-38500'
     magnitude: '2300'
-- id: standard.leading_zeroes
-  input: ustd((001.2300, 000.0040)e-2)
+- id: standard.leading_zeroes-r2
+  input: '"ustd((001.2300, 000.0040)e-2)"'
   tree:
     uncertainty_class: ustd
     value: '001.2300'
@@ -33,8 +33,8 @@ cases:
   normalized_model_text:
     value: '0.012300'
     magnitude: '0.000040'
-- id: standard.zero_exponent
-  input: ustd((1.230, 0.004)e0)
+- id: standard.zero_exponent-r2
+  input: '"ustd((1.230, 0.004)e0)"'
   tree:
     uncertainty_class: ustd
     value: '1.230'
@@ -43,8 +43,8 @@ cases:
   normalized_model_text:
     value: '1.230'
     magnitude: '0.004'
-- id: concise.negative_exponent
-  input: ustd(680(41)e-3)
+- id: concise.negative_exponent-r2
+  input: '"ustd(680(41)e-3)"'
   tree:
     uncertainty_class: ustd
     value: '680'
@@ -53,8 +53,8 @@ cases:
   normalized_model_text:
     value: '0.680'
     magnitude: '0.041'
-- id: concise.zero_exponent
-  input: ustd(1.230(4)e0)
+- id: concise.zero_exponent-r2
+  input: '"ustd(1.230(4)e0)"'
   tree:
     uncertainty_class: ustd
     value: '1.230'
@@ -63,8 +63,8 @@ cases:
   normalized_model_text:
     value: '1.230'
     magnitude: '0.004'
-- id: concise.unit
-  input: ustd(680(41)e-3, "unitsml(kg)")
+- id: concise.unit-r2
+  input: '"ustd(680(41)e-3, "unitsml(kg)")"'
   tree:
     uncertainty_class: ustd
     value: '680'
@@ -74,8 +74,8 @@ cases:
   normalized_model_text:
     value: '0.680'
     magnitude: '0.041'
-- id: expanded.dimensionless_fields
-  input: uexp((3.85, 0.23)e4, 2.00, 0.950, "unitsml(m)")
+- id: expanded.dimensionless_fields-r2
+  input: '"uexp((3.85, 0.23)e4, 2.00, 0.950, "unitsml(m)")"'
   tree:
     uncertainty_class: uexp
     value: '3.85'
@@ -89,8 +89,8 @@ cases:
     magnitude: '2300'
     coverage_factor: '2.00'
     coverage_probability: '0.950'
-- id: expanded.negative_exponent
-  input: uexp((100.02147, 0.00079)e-2, 2)
+- id: expanded.negative_exponent-r2
+  input: '"uexp((100.02147, 0.00079)e-2, 2)"'
   tree:
     uncertainty_class: uexp
     value: '100.02147'
@@ -101,8 +101,8 @@ cases:
     value: '1.0002147'
     magnitude: '0.0000079'
     coverage_factor: '2'
-- id: interval.shared_exponent
-  input: ucov((1.024, 0.983, 1.088)e-3, 0.95, shortest, "unitsml(V)")
+- id: interval.shared_exponent-r2
+  input: '"ucov((1.024, 0.983, 1.088)e-3, 0.95, shortest, "unitsml(V)")"'
   tree:
     uncertainty_class: ucov
     value: '1.024'

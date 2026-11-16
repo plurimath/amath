@@ -26,12 +26,13 @@ jobs:
         with:
           ruby-version: ${{ matrix.ruby }}
           bundler-cache: true
-      # The asciimath stage rows (generation 2) the raw-tree parity spec
-      # compares with (spec/amath/testsuite_parity_spec.rb).
+      # The asciimath stage rows (generation 5, the quoted uncertainty
+      # channel) the raw-tree parity spec compares with
+      # (spec/amath/testsuite_parity_spec.rb).
       - uses: actions/checkout@v4
         with:
           repository: plurimath/plurimath-testsuite
-          ref: fac69501e826d6bc140ca02e37bd70333cefd988
+          ref: 0acf8b1be7602595b97b7f18cf3357451f5a9601
           path: tmp/plurimath-testsuite
           persist-credentials: false
       - run: bundle exec rspec

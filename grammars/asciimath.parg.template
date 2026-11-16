@@ -222,14 +222,17 @@ grammar Asciimath version "0.1.0" {
   expression_tail_rec = (left_right_tail_rec) as left_right / (!ternary_classes_rules ((table) as table [power_base]) space_opt expression) as expr !any_char / ((&ternary_classes_rules / !table) iteration space_opt expression_tail_rec) as expr / ((base) as symbol [expression]) as expr !any_char / ((power) as symbol [expression]) as expr !any_char / (1*((rparen) as rparen space_opt controversial_symbols [(comma) as comma] expression)) as expr !any_char / ((power) as symbol space_opt expression_tail_rec) as expr / ((table) as table space_opt (rparen) as rparen space_opt [(expression) as expr] !any_char) / ([(comma) as comma] !any_char)
   left_right_tail_rec = ("left" space_opt (left_right_open_paren) as left space_opt ([iteration] [sequence]) as left_right_value space_opt "right" space_opt (left_right_close_paren) as right !any_char) / (((table) as numerator space_opt frac_slash space_opt (iteration) as denominator) as frac expression_tail_rec) / ((table) as table [power_base] [expression] !any_char)
 
-  # ---- measurement uncertainty (plurimath#493) ----
-  # ustd(y, u) / ustd(y(d)) / uexp(y, U, k[, p]) / ucov(y, lo, hi, p[, kind]),
-  # each with an optional last "unitsml(...)" argument; tree contract in
-  # plurimath docs/uncertainty-asciimath-tree.md. `uncertainty` is the first
-  # alternative of symbol_text_or_integer, so a well-formed `uexp(...)` no
-  # longer reads as `u exp(...)`. A call that is not a well-formed uncertainty form (e.g. uexp
-  # with two arguments, or uexp(x)) fails here and falls back to the
-  # ordinary alternatives, so it parses as letters exactly as before.
+  # ---- measurement uncertainty (plurimath#493, amath#17) ----
+  # The quoted channel: "ustd(y, u)" / "ustd(y(d))" / "uexp(y, U, k[, p])" /
+  # "ucov(y, lo, hi, p[, kind])", each with an optional last "unitsml(...)"
+  # argument, riding asciimath's own string literal; tree contract in
+  # plurimath docs/uncertainty-asciimath-tree.md. The bareword call forms
+  # were an unreleased extension and are gone: standard asciimath has no
+  # uncertainty, so `uexp` reads as letters `u exp` exactly as before.
+  # `uncertainty` remains the first alternative of symbol_text_or_integer:
+  # a quoted string that is not a well-formed uncertainty form (e.g. "uexp"
+  # with two arguments, or ordinary text) fails here and falls through to
+  # quoted_text, parsing as a string literal exactly as before.
   # Numbers always use a full stop, whatever the decimal marker.
   unc_number = 1*digit ["." 1*digit]
   unc_value = (["-"] unc_number) as value
@@ -247,7 +250,7 @@ grammar Asciimath version "0.1.0" {
   unc_measured_interval = unc_value unc_sep (unc_number) as lower unc_sep (unc_number) as upper
   unc_scaled_interval = unc_open unc_measured_interval unc_close unc_shared_exponent
   unc_standard = unc_scaled_pair / unc_value (unc_sep (unc_number) as magnitude / "(" (1*digit) as concise_digits ")" [unc_shared_exponent])
-  uncertainty = (uncertainty_std / uncertainty_exp / uncertainty_cov) as uncertainty
+  uncertainty = ("\"" (uncertainty_std / uncertainty_exp / uncertainty_cov) "\"") as uncertainty
   uncertainty_std = ("ustd") as uncertainty_class unc_open unc_standard [unc_unit] unc_close
   uncertainty_exp = ("uexp") as uncertainty_class unc_open (unc_scaled_pair / unc_measured_pair) unc_sep (unc_number) as coverage_factor [unc_sep (unc_number) as coverage_probability] [unc_unit] unc_close
   uncertainty_cov = ("ucov") as uncertainty_class unc_open (unc_scaled_interval / unc_measured_interval) unc_sep (unc_number) as coverage_probability [unc_sep ("shortest" / "symmetric") as interval_kind] [unc_unit] unc_close

@@ -10,14 +10,23 @@ require_relative "../../scripts/generate_stage_cases"
 # (CI checks out the generation the test workflow pins).
 RSpec.describe "plurimath-testsuite asciimath parity" do
   root = ENV.fetch("AMATH_TESTSUITE", nil)
-  generation = File.join(root.to_s, "stages/asciimath/generations/000002/payloads")
+  ledger_path = root ? File.join(root, "generations/asciimath.yaml") : nil
+  ledger = if ledger_path && File.file?(ledger_path)
+             YAML.safe_load_file(
+               ledger_path, aliases: true
+             )
+           end
+  latest = ledger&.fetch("entries")&.last
+  generation = latest ? File.join(root, latest.fetch("path"), "payloads") : nil
+  expected_rows = latest&.fetch("rows")
 
   def self.rows(dir)
     Dir[File.join(dir, "*.yaml")].sort.flat_map do |file|
+      model_rows = File.basename(file).start_with?("model-")
       YAML.safe_load_file(file, aliases: true).fetch("cases").map do |c|
         input = c["input"].is_a?(Hash) ? c["input"].fetch("str") : c["input"]
         { id: "#{File.basename(file, '.yaml')}/#{c['id']}", input: input,
-          decimal: c.dig("options", "decimal") || ".",
+          decimal: c.dig("options", "decimal") || ".", model: model_rows,
           parse_tree: c["parse_tree"], tagged: c.dig("expected", "tree") }
       end
     end
@@ -33,7 +42,7 @@ RSpec.describe "plurimath-testsuite asciimath parity" do
   end
 
   before(:all) do
-    skip "set AMATH_TESTSUITE to a plurimath-testsuite checkout" unless root && File.directory?(generation)
+    skip "set AMATH_TESTSUITE to a plurimath-testsuite checkout" unless root && File.directory?(generation.to_s)
     Amath.artifact_path = Amath::DEFAULT_ARTIFACT_PATH
     @artifact = Amath.artifact
     @bindings = Amath.bindings
@@ -45,16 +54,36 @@ RSpec.describe "plurimath-testsuite asciimath parity" do
   end
 
   %i[native ruby].each do |engine|
-    it "matches every generation-2 oracle tree and builds every model on #{engine}" do
+    it "matches every #{latest&.fetch('generation') || 'ledger'} oracle tree and builds every model on #{engine}" do
       require_native! if engine == :native
       rows = self.class.rows(generation)
-      expect(rows.size).to eq(183)
+      expect(rows.size).to eq(expected_rows)
+      # Append-only supersessions (the text-unitsml-valid-r2 pattern): a row
+      # whose id has an -r2 sibling is kept for history and is superseded by
+      # that sibling; only the sibling replays.
+      superseded = rows.select { |r| r[:id].include?("-r2") }
+                       .to_h { |r| [r[:id].sub("-r2", ""), r[:id]] }
       failures = rows.filter_map do |row|
         next if row[:parse_tree].nil? && row[:tagged].nil?
+        next if superseded.key?(row[:id])
 
-        tree = Amath::Parser.raw(row[:input], decimal: row[:decimal], engine: engine)
-        ok = row[:tagged] ? StageCases.tagged(tree, row[:input]) == row[:tagged] : texts(tree) == row[:parse_tree]
-        doc = Amath.parse_model(row[:input], decimal: row[:decimal], engine: engine)
+        if row[:model]
+          tagged_model, = StageCases.model(row[:input], engine)
+          next row[:id] unless tagged_model == row[:tagged]
+
+          next
+        end
+
+        tree = Amath::Parser.raw(row[:input], decimal: row[:decimal],
+                                              engine: engine)
+        ok = if row[:tagged]
+               StageCases.tagged(tree,
+                                 row[:input]) == row[:tagged]
+             else
+               texts(tree) == row[:parse_tree]
+             end
+        doc = Amath.parse_model(row[:input], decimal: row[:decimal],
+                                             engine: engine)
         ok &&= doc.is_a?(Amath::Model::Document) && (row[:input].empty? || doc.expression)
         row[:id] unless ok
       end
