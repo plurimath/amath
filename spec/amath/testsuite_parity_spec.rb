@@ -22,10 +22,11 @@ RSpec.describe "plurimath-testsuite asciimath parity" do
 
   def self.rows(dir)
     Dir[File.join(dir, "*.yaml")].sort.flat_map do |file|
+      model_rows = File.basename(file).start_with?("model-")
       YAML.safe_load_file(file, aliases: true).fetch("cases").map do |c|
         input = c["input"].is_a?(Hash) ? c["input"].fetch("str") : c["input"]
         { id: "#{File.basename(file, '.yaml')}/#{c['id']}", input: input,
-          decimal: c.dig("options", "decimal") || ".",
+          decimal: c.dig("options", "decimal") || ".", model: model_rows,
           parse_tree: c["parse_tree"], tagged: c.dig("expected", "tree") }
       end
     end
@@ -59,6 +60,13 @@ RSpec.describe "plurimath-testsuite asciimath parity" do
       expect(rows.size).to eq(expected_rows)
       failures = rows.filter_map do |row|
         next if row[:parse_tree].nil? && row[:tagged].nil?
+
+        if row[:model]
+          tagged_model, = StageCases.model(row[:input], engine)
+          next row[:id] unless tagged_model == row[:tagged]
+
+          next
+        end
 
         tree = Amath::Parser.raw(row[:input], decimal: row[:decimal],
                                               engine: engine)
