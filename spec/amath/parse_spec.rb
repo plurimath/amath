@@ -2,7 +2,7 @@
 
 RSpec.describe Amath do
   it "has a version number" do
-    expect(Amath::VERSION).to eq("0.2.0")
+    expect(Amath::VERSION).to eq("0.2.1")
   end
 
   it "does not load Plurimath" do
