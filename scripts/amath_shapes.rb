@@ -53,8 +53,15 @@ class AmathShapes < ShapeNormalizer
 
   def wrapper?(key) = super || EXTRA_WRAPPERS.key?(key)
 
+  # `!any_char any_char`: an alternative holding this pair never matches
+  # (the grammar's depth prewarms, see `sequence`), so it adds no shape.
+  NEVER = [{ "look" => { "ref" => "any_char" }, "positive" => false }, { "ref" => "any_char" }].freeze
+
+  def self.never?(node) = node.key?("seq") && node["seq"].each_cons(2).include?(NEVER)
+
   def shape(node, named)
-    if node.key?("alt") then node["alt"].map { |n| shape(n, named) }.reduce(:|)
+    if node.key?("alt")
+      node["alt"].reject { |n| AmathShapes.never?(n) }.map { |n| shape(n, named) }.reduce(Shape.empty, :|)
     elsif node.key?("seq") then sequence(node["seq"].map { |n| shape(n, false) })
     elsif node.key?("as")
       # The inner shape first: it may record a nested capture of the same
