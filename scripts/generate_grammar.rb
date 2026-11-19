@@ -75,6 +75,7 @@ class Generator
       "close_table" => named_list("close_table", @data["table_parenthesis"].map(&:last), "table_right"),
       "lparen" => rule("lparen", @data["parenthesis"].map { |o, _| lit(o) }),
       "rparen" => rule("rparen", @data["parenthesis"].map { |_, c| lit(c) }),
+      "unary_words" => unary_words,
       "symbol_char" => symbol_char,
       "read_text" => read_text,
       "decimal_marker" => decimal_marker,
@@ -331,6 +332,14 @@ class Generator
 
   def group(text)
     text.match?(/\A[\w"%]\S*\z/) ? text : "(#{text})"
+  end
+
+  # The unary_class words as one alternation, longest first so a word is
+  # never cut short by its own prefix (sin before sinh). Only the depth
+  # prewarm in `sequence` uses it; see the template.
+  def unary_words
+    words = @data["precompile_constants"].filter_map { |w, c| w if c == "unary_class" }
+    "(#{words.each_with_index.sort_by { |w, i| [-w.length, i] }.map { |w, _| lit(w) }.join(' / ')})"
   end
 
   # hash_to_expression(Constants.precompile_constants) via dynamic_parser_rules.
