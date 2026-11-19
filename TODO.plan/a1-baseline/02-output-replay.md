@@ -39,7 +39,9 @@ A1 oracle cases, including those absent from the shared testsuite.
 
 ## Done when
 
-- [ ] Provenance and payload integrity are checked before replay.
+- [x] Provenance and payload integrity are checked before replay.
+      Done: Plurimath `scripts/replay_asciimath_corpus.rb` checks `corpus/provenance.yaml` and payload SHA-256 first (plurimath#498).
 - [ ] Runner passes on original `ae20be11`; expected-error controls are meaningful.
 - [ ] Actual revisions/counts/commands are recorded; no baseline failures hidden.
-- [ ] A3 invokes the runner unchanged against the selected amath dependency.
+- [x] A3 invokes the runner unchanged against the selected amath dependency.
+      Done: plurimath#498 runs the runner against amath; 173 cases, 0 failures, 13 rejection positions match.

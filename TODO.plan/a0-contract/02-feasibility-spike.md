@@ -55,6 +55,7 @@ probe with its actual unsupported version.
 - [ ] All four constructs compile, serialize, reload and retain oracle parity.
 - [ ] Both actual engines pass; each result records engine, input/context,
       expected/actual success/tree or rejection offset, and exit code.
-- [ ] Engine-unavailable and invalid-artifact cases meet the selected policy.
+- [x] Engine-unavailable and invalid-artifact cases meet the selected policy.
+      Done in the shipped runtime rather than a spike: amath `spec/amath/artifact_spec.rb` and `engine_spec.rb`.
 - [ ] Results, dependency pin, commands and limitations are summarized in the
       durable contract; unresolved limitations block the affected port work.

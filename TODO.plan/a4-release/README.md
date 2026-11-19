@@ -55,7 +55,8 @@ and run existing `bundle exec rake spec` plus A1's replay on that actual gem.
 
 - [ ] Built and published package tests prove the selected engine/failure policy
       on the documented actual Ruby/platform matrix; limitations stated.
-- [ ] Released dependency passes Plurimath full suite, A1 replay and required CI.
+- [x] Released dependency passes Plurimath full suite, A1 replay and required CI.
+      Done: plurimath#534 takes amath 0.1.0 from RubyGems with all checks green; the replay spec runs in its suite.
 - [ ] Commit `README.adoc`, `docs/parser-contract.adoc` and
       `docs/extraction-handoff.adoc` before removing plan scaffolding.
 - [ ] Handoff records immutable A4 tag, Plurimath merge SHA, corpus/testsuite pins,
@@ -63,7 +64,8 @@ and run existing `bundle exec rake spec` plus A1's replay on that actual gem.
       contract if resolved; otherwise record its B-owned decision blocker. An
       unresolved B0 blocks B4, not completion of extraction A4.
 - [ ] Verify the handoff remains usable without feature branches or TODO files.
-- [ ] Plurimath PR merged: #494 acceptance complete. Do not close #493 here.
+- [x] Plurimath PR merged: #494 acceptance complete. Do not close #493 here.
+      Done: plurimath#498 and plurimath#534 merged; #494 closed 2026-11-02. #493 was closed separately.
 
 B4 then rebases Plurimath onto A4's merged main and branches amath from its A4
 release. B owns grammar/artifact changes, uncertainty captures and transform,
