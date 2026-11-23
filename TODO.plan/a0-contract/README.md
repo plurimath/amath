@@ -31,7 +31,8 @@ platform/CI coverage remains to discover.
 - [ ] Contract and A3 Slice ownership are recorded; decisions 2–3 resolved.
 - [ ] Spike passes both actual engines against the Parslet oracle, including
       rejection/error positions and full consumption.
-- [ ] Missing/invalid artifacts and absent-native behavior match the selected policy.
+- [x] Missing/invalid artifacts and absent-native behavior match the selected policy.
+      Done: amath `spec/amath/artifact_spec.rb` and `engine_spec.rb`; `docs/parser-contract.adoc` (Engine policy, Artifact loading).
 - [ ] Decision 1 evidence and durable contract destinations are recorded.
 
 On a failed hypothesis, record its reproducer and supported alternative; A2

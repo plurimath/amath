@@ -50,9 +50,12 @@ CI on the actual dependency ref; deleted checks are not proof of Ruby support.
 ## Exit criteria
 
 - [ ] Full suite and A1 replay pass with counts, SHAs and exit codes recorded.
-- [ ] Public parse/conversion behavior and Slice consumer compatibility preserved.
-- [ ] Dependency still satisfies remaining Parslet consumers; Constants retained.
-- [ ] Browser removal, decision timing and release/PR documentation agree.
+- [x] Public parse/conversion behavior and Slice consumer compatibility preserved.
+      Done: plurimath#498 (`Asciimath::SliceAdapter` builds real `Parslet::Slice` leaves; Transform unchanged).
+- [x] Dependency still satisfies remaining Parslet consumers; Constants retained.
+      Done: Plurimath gemspec keeps `parslet`; `lib/plurimath/asciimath/constants.rb` retained (plurimath#498).
+- [x] Browser removal, decision timing and release/PR documentation agree.
+      Done: decision 8 recorded; plurimath#501 restored the plurimath-js job that #498 removed.
 - [ ] No changes outside the signed A-owned paths; B integration conflicts resolved.
 
 Next: hand the passing integration ref and actual support matrix to A4; no gem
