@@ -1,10 +1,9 @@
 # frozen_string_literal: true
 
-# Input nested deeper than Parsanol's native recursion limit (about 110
-# levels of "(" and 80 of "{" with the AsciiMath artifact). Under
-# engine: :auto amath reruns such input on the Ruby engine itself, instead of
-# letting Parsanol's native error path reparse it through its interpreter
-# (which took minutes or raised SystemStackError).
+# Deep input must keep its tree and finish promptly, whether Parsanol's
+# native engine handles it or :auto reruns it on Ruby. The native limit
+# depends on the Parsanol version, so a fixed input depth does not imply
+# fallback. Exercise the limit error explicitly below.
 RSpec.describe "Amath deep nesting" do
   before do
     require_native!
@@ -65,10 +64,9 @@ RSpec.describe "Amath deep nesting" do
     expect(plain(Amath::Parser.raw("{{x}}"))).to eq(braces_tree(2))
   end
 
-  it "parses 200 levels of braces under :auto on the Ruby engine" do
+  it "parses 200 levels of braces under :auto with the expected tree" do
     input = "#{'{' * 200}x#{'}' * 200}"
     tree, seconds = timed { Amath::Parser.raw(input) }
-    expect(Amath.last_engine).to eq(:ruby)
     expect(seconds).to be < 10
     expect(plain(tree)).to eq(braces_tree(200))
   end
@@ -76,7 +74,6 @@ RSpec.describe "Amath deep nesting" do
   it "parses 200 levels of parentheses under :auto like the Ruby engine" do
     input = "#{'(' * 200}x#{')' * 200}"
     tree, seconds = timed { Amath::Parser.raw(input) }
-    expect(Amath.last_engine).to eq(:ruby)
     expect(seconds).to be < 10
     expect(tree).to eq(Amath::Parser.raw(input, engine: :ruby))
     expect(leaves(tree).map(&:to_s).join.count("(")).to eq(200)
@@ -84,9 +81,10 @@ RSpec.describe "Amath deep nesting" do
   end
 
   it "parses 200 unclosed parentheses under :auto" do
-    _, seconds = timed { Amath::Parser.raw("#{'(' * 200}x") }
-    expect(Amath.last_engine).to eq(:ruby)
+    input = "#{'(' * 200}x"
+    tree, seconds = timed { Amath::Parser.raw(input) }
     expect(seconds).to be < 10
+    expect(tree).to eq(Amath::Parser.raw(input, engine: :ruby))
   end
 
   it "keeps the native engine for input within its limit" do
@@ -98,6 +96,8 @@ RSpec.describe "Amath deep nesting" do
 
   it "raises NestingTooDeep under engine: :native instead of running Ruby" do
     allow(Amath.artifact).to receive(:parse).and_call_original
+    allow(Amath.artifact).to receive(:parse).with(anything, anything, mode: :native)
+      .and_raise(Parsanol::RecursionLimitExceeded, "Maximum recursion depth (500) exceeded")
     expect { Amath::Parser.raw("#{'{' * 200}x#{'}' * 200}", engine: :native) }
       .to raise_error(Amath::NestingTooDeep, /native engine's recursion limit.*engine: :ruby/) { |e|
         expect(e).to be_a(Amath::ParseError)
