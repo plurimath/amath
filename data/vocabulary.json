@@ -30,8 +30,8 @@
   ],
   "units": {
     "artifact": "asciiunits",
-    "version": "0.1.6",
-    "checksum": "sha256:aa22618c80dc02f3fe1edf2c798dbe34aceae5f4d84524ff98f76a2b91af151d"
+    "version": "0.1.8",
+    "checksum": "sha256:2159dfb6e4faaf04a846ed351dd84b545d4ecfeb3c33905bea378ac97cc4ab48"
   },
   "bindings": {
     "symbol": {
