@@ -4,6 +4,8 @@ source "https://rubygems.org"
 
 gemspec
 
+gem "asciiunits", "0.1.8"
+
 # The artifact job in CI recompiles the grammar with the Parsanol version
 # recorded in artifacts/asciimath.checksums.txt, so a newer Parsanol release
 # cannot change the bytes it compares.
