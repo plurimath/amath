@@ -217,10 +217,16 @@ Limits of what `last_engine` proves:
 [[deep-nesting]]
 === Deep nesting
 
-Parsanol's native engine stops at a fixed recursion depth ("Maximum recursion
-depth (500) exceeded" or "Recursion limit exceeded: depth 1000"). With the
-AsciiMath artifact that is about 110 levels of `(` and about 80 of `{`; other
-constructs (`sqrt`, `/`, unary `-`) reach it at other depths. On a thread
+Parsanol's native recursion limits depend on its version and the parsed
+construct. With Parsanol 1.5.9, the Ruby tree transform stops at depth 500
+("Maximum recursion depth (500) exceeded"): about 110 levels of `(` and
+about 80 of `{` with the AsciiMath artifact. Newer Parsanol engines raise
+that transform limit to 8192; Parsanol 1.5.16 and 1.5.18 parse 200 levels
+of either bracket natively. Other native limits can report
+"Recursion limit exceeded: depth 1000". Other constructs (`sqrt`, `/`,
+unary `-`) reach the limits at other depths. Under `engine: :auto`, Ruby
+fallback happens when native actually reaches a limit, not at a fixed
+bracket depth. On a thread
 other than the main one, the native call can also exhaust the thread's Ruby
 stack (1 MiB by default) much earlier (at about 40 levels of `(` on x86_64 Linux); Ruby reports
 that as `SystemStackError`.
