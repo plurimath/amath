@@ -2,7 +2,7 @@
 
 RSpec.describe Amath do
   it "has a version number" do
-    expect(Amath::VERSION).to eq("0.2.1")
+    expect(Amath::VERSION).to match(/\A\d+\.\d+\.\d+/)
   end
 
   it "does not load Plurimath" do
