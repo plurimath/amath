@@ -26,7 +26,7 @@ jobs:
         with:
           ruby-version: ${{ matrix.ruby }}
           bundler-cache: true
-      # The asciimath stage rows (generation 5, the quoted uncertainty
+      # The asciimath stage rows (generation 6, the quoted uncertainty
       # channel) the raw-tree parity spec compares with
       # (spec/amath/testsuite_parity_spec.rb).
       - uses: actions/checkout@v4
