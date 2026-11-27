@@ -67,10 +67,10 @@ RSpec.describe AmathReplayCorpus do
   end
 
   describe "the committed pin" do
-    it "names asciimath generation 5 at an exact testsuite commit" do
+    it "names asciimath generation 6 at an exact testsuite commit" do
       pin = described_class.load_pin(PIN_FILE)
       expect(pin.language).to eq("asciimath")
-      expect(pin.generation).to eq(5)
+      expect(pin.generation).to eq(6)
       expect(pin.commit).to match(/\A\h{40}\z/)
       expect(pin.digest).to match(/\Asha256:\h{64}\z/)
     end
